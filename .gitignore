@@ -17,6 +17,7 @@ db
 .env
 utils/EnvConfig.java
 
+
 ### STS ###
 .apt_generated
 .classpath
