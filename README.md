@@ -9,8 +9,8 @@
 1. **Создать Spring Boot приложение.**
 2. **Реализовать REST API** для одной ключевой сущности своей предметной области (domain).
 3. **Реализовать эндпоинты:**
-    * GET endpoint с использованием `@RequestParam`
-    * GET endpoint с использованием `@PathVariable`
+    * GET endpoint с использованием  `@RequestParam`
+    * GET endpoint с использованием  `@PathVariable`
 4. **Реализовать архитектурные слои:** Controller → Service → Repository.
 5. **Реализовать DTO и mapper** между Entity и API-ответом.
 6. **Настроить Checkstyle** и привести весь код к соответствующему стилю.
