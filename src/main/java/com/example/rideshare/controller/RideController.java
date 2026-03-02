@@ -23,8 +23,7 @@ public class RideController {
     // GET с PathVariable
     @GetMapping("/{id}")
     public RideResponseDto getById(@PathVariable Long id) {
-        Ride ride = service.getRideById(id)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+        Ride ride = service.getRideById(id).orElseThrow(() -> new RuntimeException("Ride not found"));
         return mapper.toDto(ride);
     }
 
@@ -33,13 +32,9 @@ public class RideController {
     public List<RideResponseDto> getAll(
             @RequestParam(required = false) String fromCity) {
 
-        List<Ride> rides = fromCity == null
-                ? service.getAll()
-                : service.getByFromCity(fromCity);
+        List<Ride> rides = fromCity == null ? service.getAll() : service.getByFromCity(fromCity);
 
-        return rides.stream()
-                .map(mapper::toDto)
-                .toList();
+        return rides.stream().map(mapper::toDto).toList();
     }
 
     @PostMapping
