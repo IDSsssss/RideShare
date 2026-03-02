@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/rides")
 public class RideController {
-
   private final RideService service;
   private final RideMapper mapper;
 

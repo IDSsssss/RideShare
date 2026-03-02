@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class RideService {
-
   private final RideRepository repository;
 
   /**
