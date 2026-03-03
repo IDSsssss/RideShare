@@ -21,7 +21,7 @@ public class RideRepository {
         save(new Ride(null, "Mikhail", "Minsk", "Gomel", LocalDateTime.now().plusDays(1), 3));
         save(new Ride(null, "Georgiy", "Minsk", "Brest", LocalDateTime.now().plusDays(2), 2));
         save(new Ride(null, "Oleg", "Mogilev", "Grodno", LocalDateTime.now().plusDays(3), 4));
-        save(new Ride(null, "Andrey", "Gomel", "Brest", LocalDateTime.now().plusDays(1), 1));
+        save(new Ride(null, "Andrey", "Gomel", "Brest", LocalDateTime.now().plusDays(5), 1));
     }
 
     public Ride save(Ride ride) {
