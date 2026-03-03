@@ -11,66 +11,35 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Repository;
 
-/**
- * Repository for managing rides.
- */
 @Repository
 public class RideRepository {
-  private final Map<Long, Ride> storage = new HashMap<>();
-  private final AtomicLong idGenerator = new AtomicLong();
+    private final Map<Long, Ride> storage = new HashMap<>();
+    private final AtomicLong idGenerator = new AtomicLong();
 
-  /**
-   * Method executed automatically at application startup
-   * and initializes some rides.
-   */
-  @PostConstruct
-  public void init() {
-    save(new Ride(null, "Mikhail", "Minsk", "Gomel", LocalDateTime.now().plusDays(1), 3));
-    save(new Ride(null, "Georgiy", "Minsk", "Brest", LocalDateTime.now().plusDays(2), 2));
-    save(new Ride(null, "Oleg", "Mogilev", "Grodno", LocalDateTime.now().plusDays(3), 4));
-    save(new Ride(null, "Andrey", "Gomel", "Brest", LocalDateTime.now().plusDays(1), 1));
-  }
+    @PostConstruct
+    public void init() {
+        save(new Ride(null, "Mikhail", "Minsk", "Gomel", LocalDateTime.now().plusDays(1), 3));
+        save(new Ride(null, "Georgiy", "Minsk", "Brest", LocalDateTime.now().plusDays(2), 2));
+        save(new Ride(null, "Oleg", "Mogilev", "Grodno", LocalDateTime.now().plusDays(3), 4));
+        save(new Ride(null, "Andrey", "Gomel", "Brest", LocalDateTime.now().plusDays(1), 1));
+    }
 
-  /**
-   * Saves a ride in the storage and assigns a unique ID.
-   *
-   * @param ride the ride to save
-   * @return the saved ride with assigned ID
-   */
-  public Ride save(Ride ride) {
-    Long id = idGenerator.incrementAndGet();
-    ride.setId(id);
-    storage.put(id, ride);
-    return ride;
-  }
+    public Ride save(Ride ride) {
+        Long id = idGenerator.incrementAndGet();
+        ride.setId(id);
+        storage.put(id, ride);
+        return ride;
+    }
 
-  /**
-   * Finds a ride by its ID.
-   *
-   * @param id the ride ID
-   * @return an Optional containing the ride if found, otherwise empty
-   */
-  public Optional<Ride> findById(Long id) {
-    return Optional.ofNullable(storage.get(id));
-  }
+    public Optional<Ride> findById(Long id) {
+        return Optional.ofNullable(storage.get(id));
+    }
 
-  /**
-   * Returns a list of all rides.
-   *
-   * @return list of all rides
-   */
-  public List<Ride> findAll() {
-    return new ArrayList<>(storage.values());
-  }
+    public List<Ride> findAll() {
+        return new ArrayList<>(storage.values());
+    }
 
-  /**
-   * Returns a list of rides departing from the specified city.
-   *
-   * @param fromCity the departure city
-   * @return list of rides from the specified city
-   */
-  public List<Ride> findByFromCity(String fromCity) {
-    return storage.values().stream().filter(ride -> ride.getFromCity().equalsIgnoreCase(fromCity))
-            .toList();
-  }
+    public List<Ride> findByFromCity(String fromCity) {
+        return storage.values().stream().filter(ride -> ride.getFromCity().equalsIgnoreCase(fromCity)).toList();
+    }
 }
