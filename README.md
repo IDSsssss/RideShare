@@ -1,5 +1,5 @@
 # RideShare
-## Шевченко Иван 450501
+
 📊 [Sonar](https://sonarcloud.io/summary/new_code?id=IDSsssss_RideShare&branch=main)
 
 ## О проекте
