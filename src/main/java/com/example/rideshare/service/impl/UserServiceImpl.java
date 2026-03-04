@@ -22,7 +22,6 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
-    // Константы для сообщений об ошибках
     private static final String USER_NOT_FOUND = "User not found with id: ";
     private static final String USER_ID_NULL = "User ID cannot be null";
     private static final String USER_EMAIL_EXISTS = "User with email %s already exists";
@@ -79,7 +78,6 @@ public class UserServiceImpl implements UserService {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + id));
 
-        // Проверка email при обновлении
         if (userDto.getEmail() != null && !userDto.getEmail()
                 .equals(existingUser.getEmail()) && userRepository.existsByEmail(userDto.getEmail())) {
             throw new BusinessException(String.format(EMAIL_TAKEN, userDto.getEmail()));
