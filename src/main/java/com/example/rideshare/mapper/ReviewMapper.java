@@ -2,19 +2,39 @@ package com.example.rideshare.mapper;
 
 import com.example.rideshare.dto.ReviewDto;
 import com.example.rideshare.model.Review;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring", uses = {UserMapper.class, RideMapper.class})
-public interface ReviewMapper {
-    ReviewMapper INSTANCE = Mappers.getMapper(ReviewMapper.class);
+@Component
+@RequiredArgsConstructor
+public class ReviewMapper {
 
-    @Mapping(target = "ride", ignore = true)
-    ReviewDto toDto(Review review);
+    private final UserMapper userMapper;
 
-    Review toEntity(ReviewDto reviewDTO);
+    public ReviewDto toDto(Review review) {
+        if (review == null) {
+            return null;
+        }
 
-    List<ReviewDto> toDtoList(List<Review> reviews);
+        ReviewDto dto = new ReviewDto();
+        dto.setId(review.getId());
+        dto.setRating(review.getRating());
+        dto.setComment(review.getComment());
+        dto.setCreatedAt(review.getCreatedAt());
+
+        if (review.getReviewer() != null) {
+            dto.setReviewer(userMapper.toDto(review.getReviewer()));
+        }
+
+        return dto;
+    }
+
+    public List<ReviewDto> toDtoList(List<Review> reviews) {
+        if (reviews == null) {
+            return List.of();
+        }
+        return reviews.stream().map(this::toDto).collect(Collectors.toList());
+    }
 }

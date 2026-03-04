@@ -2,6 +2,7 @@ package com.example.rideshare.controller;
 
 import com.example.rideshare.dto.CreateRideRequest;
 import com.example.rideshare.dto.RideDto;
+import com.example.rideshare.dto.UpdateRideStatusRequest;
 import com.example.rideshare.service.RideService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -70,6 +71,14 @@ public class RideController {
             @RequestBody List<Long> passengerIds) {
         // Демонстрация сохранения нескольких связанных сущностей
         RideDto updatedRide = rideService.createRideWithBookings(rideId, passengerIds);
+        return ResponseEntity.ok(updatedRide);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<RideDto> updateRideStatus(
+            @PathVariable Long id,
+            @RequestBody UpdateRideStatusRequest request) {
+        RideDto updatedRide = rideService.updateRideStatus(id, request.getStatus());
         return ResponseEntity.ok(updatedRide);
     }
 }

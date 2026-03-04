@@ -2,6 +2,7 @@ package com.example.rideshare.service;
 
 import com.example.rideshare.dto.CreateRideRequest;
 import com.example.rideshare.dto.RideDto;
+import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.exception.BusinessException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.BookingMapper;
@@ -24,6 +25,7 @@ public class RideService {
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
     private final BookingMapper bookingMapper;
+    private final BookingRepository bookingRepository;
 
     @Transactional(readOnly = true)
     public List<RideDto> getAllRides() {
@@ -140,6 +142,31 @@ public class RideService {
         }
 
         Ride savedRide = rideRepository.save(ride);
-        return rideMapper.toDtoWithBookings(savedRide, bookingMapper);
+        return rideMapper.toDtoWithBookings(savedRide);
+    }
+
+    @Transactional
+    public RideDto updateRideStatus(Long id, String status) {
+
+        Ride ride = rideRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + id));
+
+        // Валидация статуса
+        if (!List.of("SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED").contains(status)) {
+            throw new BusinessException("Invalid status: " + status);
+        }
+
+        // Проверка возможности смены статуса
+        if ("CANCELLED".equals(status)) {
+            Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
+            if (bookedSeats != null && bookedSeats > 0) {
+                throw new BusinessException("Cannot cancel ride with existing bookings");
+            }
+        }
+
+        ride.setStatus(status);
+        Ride updatedRide = rideRepository.save(ride);
+
+        return rideMapper.toDto(updatedRide);
     }
 }

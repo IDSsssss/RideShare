@@ -2,19 +2,40 @@ package com.example.rideshare.mapper;
 
 import com.example.rideshare.dto.BookingDto;
 import com.example.rideshare.model.Booking;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring", uses = {UserMapper.class, RideMapper.class})
-public interface BookingMapper {
-    BookingMapper INSTANCE = Mappers.getMapper(BookingMapper.class);
+@Component
+@RequiredArgsConstructor
+public class BookingMapper {
 
-    @Mapping(target = "ride", ignore = true) // Избегаем циклических ссылок
-    BookingDto toDto(Booking booking);
+    private final UserMapper userMapper;
 
-    Booking toEntity(BookingDto bookingDTO);
+    public BookingDto toDto(Booking booking) {
+        if (booking == null) {
+            return null;
+        }
 
-    List<BookingDto> toDtoList(List<Booking> bookings);
+        BookingDto dto = new BookingDto();
+        dto.setId(booking.getId());
+        dto.setBookingTime(booking.getBookingTime());
+        dto.setSeats(booking.getSeats());
+        dto.setStatus(booking.getStatus());
+        dto.setTotalPrice(booking.getTotalPrice());
+
+        if (booking.getPassenger() != null) {
+            dto.setPassenger(userMapper.toDto(booking.getPassenger()));
+        }
+
+        return dto;
+    }
+
+    public List<BookingDto> toDtoList(List<Booking> bookings) {
+        if (bookings == null) {
+            return List.of();
+        }
+        return bookings.stream().map(this::toDto).collect(Collectors.toList());
+    }
 }

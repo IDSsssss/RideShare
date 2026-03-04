@@ -1,25 +1,55 @@
+// mapper/RideMapper.java
 package com.example.rideshare.mapper;
 
 import com.example.rideshare.dto.RideDto;
 import com.example.rideshare.model.Ride;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring", uses = {UserMapper.class, RouteMapper.class, BookingMapper.class})
-public interface RideMapper {
-    RideMapper INSTANCE = Mappers.getMapper(RideMapper.class);
+@Component
+@RequiredArgsConstructor
+public class RideMapper {
 
-    @Mapping(target = "bookings", ignore = true) // Избегаем циклических ссылок
-    RideDto toDto(Ride ride);
+    private final UserMapper userMapper;
+    private final RouteMapper routeMapper;
+    private final BookingMapper bookingMapper;
 
-    @Mapping(target = "bookings", ignore = true)
-    Ride toEntity(RideDto rideDTO);
+    public RideDto toDto(Ride ride) {
+        if (ride == null) {
+            return null;
+        }
 
-    List<RideDto> toDtoList(List<Ride> rides);
+        RideDto dto = new RideDto();
+        dto.setId(ride.getId());
+        dto.setDepartureTime(ride.getDepartureTime());
+        dto.setAvailableSeats(ride.getAvailableSeats());
+        dto.setPrice(ride.getPrice());
+        dto.setStatus(ride.getStatus());
 
-    // Метод для полного маппинга с bookings
-    @Mapping(target = "bookings", expression = "java(ride.getBookings() != null ? bookingMapper.toDtoList(ride.getBookings()) : null)")
-    RideDto toDtoWithBookings(Ride ride, @org.mapstruct.Context BookingMapper bookingMapper);
+        if (ride.getDriver() != null) {
+            dto.setDriver(userMapper.toDto(ride.getDriver()));
+        }
+        if (ride.getRoute() != null) {
+            dto.setRoute(routeMapper.toDto(ride.getRoute()));
+        }
+
+        return dto;
+    }
+
+    public List<RideDto> toDtoList(List<Ride> rides) {
+        if (rides == null) {
+            return List.of();
+        }
+        return rides.stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    public RideDto toDtoWithBookings(Ride ride) {
+        RideDto dto = toDto(ride);
+        if (ride != null && ride.getBookings() != null && !ride.getBookings().isEmpty()) {
+            dto.setBookings(bookingMapper.toDtoList(ride.getBookings()));
+        }
+        return dto;
+    }
 }

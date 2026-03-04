@@ -28,17 +28,19 @@ public class BookingService {
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
 
-        User passenger = userRepository.findById(passengerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Passenger not found"));
 
         // Проверяем доступность мест
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(rideId);
-        if (bookedSeats == null) bookedSeats = 0;
+        if (bookedSeats == null) {
+            bookedSeats = 0;
+        }
 
         if (bookedSeats + seats > ride.getAvailableSeats()) {
             throw new BusinessException("Not enough available seats");
         }
 
+        User passenger = userRepository.findById(passengerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Passenger not found"));
         Booking booking = new Booking();
         booking.setRide(ride);
         booking.setPassenger(passenger);
