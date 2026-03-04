@@ -1,4 +1,3 @@
-// mapper/RideMapper.java
 package com.example.rideshare.mapper;
 
 import com.example.rideshare.dto.RideDto;

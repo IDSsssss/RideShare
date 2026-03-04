@@ -29,20 +29,20 @@ public class UserService {
     }
 
     @Transactional
-    public UserDto createUser(UserDto userDTO) {
-        User user = userMapper.toEntity(userDTO);
+    public UserDto createUser(UserDto userDto) {
+        User user = userMapper.toEntity(userDto);
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }
 
     @Transactional
-    public UserDto updateUser(Long id, UserDto userDTO) {
+    public UserDto updateUser(Long id, UserDto userDto) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
-        existingUser.setName(userDTO.getName());
-        existingUser.setEmail(userDTO.getEmail());
-        existingUser.setPhone(userDTO.getPhone());
+        existingUser.setName(userDto.getName());
+        existingUser.setEmail(userDto.getEmail());
+        existingUser.setPhone(userDto.getPhone());
 
         User updatedUser = userRepository.save(existingUser);
         return userMapper.toDto(updatedUser);
