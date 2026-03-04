@@ -22,6 +22,13 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
+    // Константы для сообщений об ошибках
+    private static final String USER_NOT_FOUND = "User not found with id: ";
+    private static final String USER_ID_NULL = "User ID cannot be null";
+    private static final String USER_EMAIL_EXISTS = "User with email %s already exists";
+    private static final String EMAIL_TAKEN = "Email %s is already taken";
+    private static final String EMAIL_NULL_EMPTY = "Email cannot be null or empty";
+
     @Override
     @Transactional(readOnly = true)
     public List<UserResponseDto> getAllUsers() {
@@ -35,11 +42,11 @@ public class UserServiceImpl implements UserService {
         log.debug("Fetching user by id: {}", id);
 
         if (id == null) {
-            throw new BusinessException("User ID cannot be null");
+            throw new BusinessException(USER_ID_NULL);
         }
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + id));
 
         return userMapper.toResponseDto(user);
     }
@@ -50,7 +57,7 @@ public class UserServiceImpl implements UserService {
         log.debug("Creating new user with email: {}", userDto.getEmail());
 
         if (userRepository.existsByEmail(userDto.getEmail())) {
-            throw new BusinessException("User with email " + userDto.getEmail() + " already exists");
+            throw new BusinessException(String.format(USER_EMAIL_EXISTS, userDto.getEmail()));
         }
 
         User user = userMapper.toEntity(userDto);
@@ -66,17 +73,19 @@ public class UserServiceImpl implements UserService {
         log.debug("Updating user with id: {}", id);
 
         if (id == null) {
-            throw new BusinessException("User ID cannot be null");
+            throw new BusinessException(USER_ID_NULL);
         }
 
         User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + id));
 
+        // Проверка email при обновлении
         if (userDto.getEmail() != null && !userDto.getEmail()
                 .equals(existingUser.getEmail()) && userRepository.existsByEmail(userDto.getEmail())) {
-            throw new BusinessException("Email " + userDto.getEmail() + " is already taken");
+            throw new BusinessException(String.format(EMAIL_TAKEN, userDto.getEmail()));
         }
 
+        // Обновление полей
         if (userDto.getName() != null) {
             existingUser.setName(userDto.getName());
         }
@@ -102,11 +111,11 @@ public class UserServiceImpl implements UserService {
         log.debug("Deleting user with id: {}", id);
 
         if (id == null) {
-            throw new BusinessException("User ID cannot be null");
+            throw new BusinessException(USER_ID_NULL);
         }
 
         if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+            throw new ResourceNotFoundException(USER_NOT_FOUND + id);
         }
 
         userRepository.deleteById(id);
@@ -119,11 +128,11 @@ public class UserServiceImpl implements UserService {
         log.debug("Fetching user with rides by id: {}", id);
 
         if (id == null) {
-            throw new BusinessException("User ID cannot be null");
+            throw new BusinessException(USER_ID_NULL);
         }
 
         User user = userRepository.findByIdWithRides(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + id));
 
         return userMapper.toResponseDto(user);
     }
@@ -134,11 +143,12 @@ public class UserServiceImpl implements UserService {
         log.debug("Fetching user by email: {}", email);
 
         if (email == null || email.trim().isEmpty()) {
-            throw new BusinessException("Email cannot be null or empty");
+            throw new BusinessException(EMAIL_NULL_EMPTY);
         }
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format("User not found with email: %s", email)));
 
         return userMapper.toResponseDto(user);
     }
