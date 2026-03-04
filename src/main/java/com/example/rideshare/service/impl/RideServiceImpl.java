@@ -32,6 +32,24 @@ public class RideServiceImpl implements RideService {
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
 
+    // Константы для сообщений об ошибках
+    private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
+    private static final String RIDE_ID_NULL = "Ride ID cannot be null";
+    private static final String DRIVER_ID_NULL = "Driver ID cannot be null";
+    private static final String DRIVER_NOT_FOUND = "Driver not found with id: ";
+    private static final String INVALID_RIDE_STATUS = "Cannot %s ride that is not in SCHEDULED status";
+
+    // Константы для статусов
+    private static final String STATUS_SCHEDULED = "SCHEDULED";
+    private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final String STATUS_CANCELLED = "CANCELLED";
+
+    // Список допустимых статусов
+    private static final List<String> VALID_STATUSES = List.of(
+            STATUS_SCHEDULED, STATUS_IN_PROGRESS, STATUS_COMPLETED, STATUS_CANCELLED
+    );
+
     @Override
     @Transactional(readOnly = true)
     public List<RideResponseDto> getAllRides() {
@@ -45,11 +63,11 @@ public class RideServiceImpl implements RideService {
         log.debug("Fetching ride by id: {}", id);
 
         if (id == null) {
-            throw new BusinessException("Ride ID cannot be null");
+            throw new BusinessException(RIDE_ID_NULL);
         }
 
         Ride ride = rideRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
         return rideMapper.toResponseDto(ride);
     }
@@ -60,11 +78,11 @@ public class RideServiceImpl implements RideService {
         log.debug("Creating new ride for driver id: {}", request.getDriverId());
 
         if (request.getDriverId() == null) {
-            throw new BusinessException("Driver ID cannot be null");
+            throw new BusinessException(DRIVER_ID_NULL);
         }
 
         User driver = userRepository.findById(request.getDriverId())
-                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + request.getDriverId()));
+                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_NOT_FOUND + request.getDriverId()));
 
         if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
             throw new BusinessException("Departure time must be in the future");
@@ -72,6 +90,7 @@ public class RideServiceImpl implements RideService {
 
         Ride ride = rideMapper.toEntity(request);
         ride.setDriver(driver);
+        ride.setStatus(STATUS_SCHEDULED);
         ride.setBookings(new ArrayList<>());
         ride.setPassengers(new java.util.HashSet<>());
 
@@ -94,11 +113,15 @@ public class RideServiceImpl implements RideService {
     public RideResponseDto updateRide(Long id, RideRequestDto request) {
         log.debug("Updating ride with id: {}", id);
 
-        Ride existingRide = rideRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + id));
+        if (id == null) {
+            throw new BusinessException(RIDE_ID_NULL);
+        }
 
-        if (!"SCHEDULED".equals(existingRide.getStatus())) {
-            throw new BusinessException("Cannot update ride that is not in SCHEDULED status");
+        Ride existingRide = rideRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
+
+        if (!STATUS_SCHEDULED.equals(existingRide.getStatus())) {
+            throw new BusinessException(String.format(INVALID_RIDE_STATUS, "update"));
         }
 
         existingRide.setDepartureTime(request.getDepartureTime());
@@ -122,11 +145,15 @@ public class RideServiceImpl implements RideService {
     public void deleteRide(Long id) {
         log.debug("Deleting ride with id: {}", id);
 
-        Ride ride = rideRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + id));
+        if (id == null) {
+            throw new BusinessException(RIDE_ID_NULL);
+        }
 
-        if (!"SCHEDULED".equals(ride.getStatus())) {
-            throw new BusinessException("Cannot delete ride that is not in SCHEDULED status");
+        Ride ride = rideRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
+
+        if (!STATUS_SCHEDULED.equals(ride.getStatus())) {
+            throw new BusinessException(String.format(INVALID_RIDE_STATUS, "delete"));
         }
 
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
@@ -168,14 +195,22 @@ public class RideServiceImpl implements RideService {
     public RideResponseDto updateRideStatus(Long id, String status) {
         log.debug("Updating ride status for id: {} to {}", id, status);
 
-        Ride ride = rideRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + id));
+        if (id == null) {
+            throw new BusinessException(RIDE_ID_NULL);
+        }
 
-        if (!List.of("SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED").contains(status)) {
+        if (status == null || status.trim().isEmpty()) {
+            throw new BusinessException("Status cannot be null or empty");
+        }
+
+        Ride ride = rideRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
+
+        if (!VALID_STATUSES.contains(status)) {
             throw new BusinessException("Invalid status: " + status);
         }
 
-        if ("CANCELLED".equals(status)) {
+        if (STATUS_CANCELLED.equals(status)) {
             Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
             if (bookedSeats != null && bookedSeats > 0) {
                 throw new BusinessException("Cannot cancel ride with existing bookings");
