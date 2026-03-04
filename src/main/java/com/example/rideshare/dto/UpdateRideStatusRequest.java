@@ -4,5 +4,5 @@ import lombok.Data;
 
 @Data
 public class UpdateRideStatusRequest {
-    private String status; // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+    private String status;
 }

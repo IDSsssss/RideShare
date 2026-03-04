@@ -20,47 +20,48 @@ import java.util.List;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
-public class UserController {
+public class UserController extends BaseController {
     private final UserService userService;
 
     // GET endpoint с @RequestParam
     @GetMapping
     public ResponseEntity<List<UserDto>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+        return ok(userService.getAllUsers());
     }
 
     // GET endpoint с @PathVariable
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.getUserById(id));
+        return ok(userService.getUserById(id));
     }
 
     @GetMapping("/search")
     public ResponseEntity<UserDto> getUserByEmail(@RequestParam String email) {
         // Демонстрация @RequestParam
-        return ResponseEntity.ok(userService.getUserById(1L)); // Упрощенно
+        return ok(userService.getUserById(1L)); // Упрощенно
     }
 
     @PostMapping
     public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserDto userDto) {
-        UserDto createdUser = userService.createUser(userDto);
-        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+        return created(userService.createUser(userDto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @Valid @RequestBody UserDto userDto) {
         UserDto updatedUser = userService.updateUser(id, userDto);
-        return ResponseEntity.ok(updatedUser);
+
+        return ok(updatedUser);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+
+        return noContent();
     }
 
     @GetMapping("/{id}/with-rides")
     public ResponseEntity<UserDto> getUserWithRides(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.getUserWithRides(id));
+        return ok(userService.getUserWithRides(id));
     }
 }

@@ -36,6 +36,7 @@ public class BookingMapper {
         if (bookings == null) {
             return List.of();
         }
+
         return bookings.stream().map(this::toDto).collect(Collectors.toList());
     }
 }

@@ -30,6 +30,7 @@ public class RideMapper {
         if (ride.getDriver() != null) {
             dto.setDriver(userMapper.toDto(ride.getDriver()));
         }
+
         if (ride.getRoute() != null) {
             dto.setRoute(routeMapper.toDto(ride.getRoute()));
         }
@@ -41,14 +42,17 @@ public class RideMapper {
         if (rides == null) {
             return List.of();
         }
+
         return rides.stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public RideDto toDtoWithBookings(Ride ride) {
         RideDto dto = toDto(ride);
+
         if (ride != null && ride.getBookings() != null && !ride.getBookings().isEmpty()) {
             dto.setBookings(bookingMapper.toDtoList(ride.getBookings()));
         }
+
         return dto;
     }
 }

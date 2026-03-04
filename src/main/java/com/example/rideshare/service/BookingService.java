@@ -25,11 +25,9 @@ public class BookingService {
 
     @Transactional
     public BookingDto createBooking(Long rideId, Long passengerId, Integer seats) {
-        Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
+        Ride ride = rideRepository.findById(rideId).orElseThrow(() ->
+                new ResourceNotFoundException("Ride not found"));
 
-
-        // Проверяем доступность мест
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(rideId);
         if (bookedSeats == null) {
             bookedSeats = 0;
@@ -39,8 +37,8 @@ public class BookingService {
             throw new BusinessException("Not enough available seats");
         }
 
-        User passenger = userRepository.findById(passengerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Passenger not found"));
+        User passenger = userRepository.findById(passengerId).orElseThrow(() ->
+                new ResourceNotFoundException("Passenger not found"));
         Booking booking = new Booking();
         booking.setRide(ride);
         booking.setPassenger(passenger);
@@ -50,7 +48,6 @@ public class BookingService {
 
         Booking savedBooking = bookingRepository.save(booking);
 
-        // Обновляем список бронирований в связанных сущностях
         ride.getBookings().add(savedBooking);
         passenger.getBookings().add(savedBooking);
 
@@ -59,8 +56,8 @@ public class BookingService {
 
     @Transactional
     public BookingDto cancelBooking(Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
+                new ResourceNotFoundException("Booking not found"));
 
         booking.setStatus("CANCELLED");
         Booking cancelledBooking = bookingRepository.save(booking);
@@ -71,6 +68,7 @@ public class BookingService {
     @Transactional(readOnly = true)
     public List<BookingDto> getBookingsByUser(Long userId) {
         List<Booking> bookings = bookingRepository.findByPassengerId(userId);
+
         return bookingMapper.toDtoList(bookings);
     }
 }

@@ -35,6 +35,7 @@ public class ReviewMapper {
         if (reviews == null) {
             return List.of();
         }
+
         return reviews.stream().map(this::toDto).collect(Collectors.toList());
     }
 }

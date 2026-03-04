@@ -18,8 +18,11 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     List<Ride> findUpcomingRidesWithDetails(@Param("currentTime") LocalDateTime currentTime);
 
     // Решение проблемы N+1 через JOIN FETCH
-    @Query("SELECT DISTINCT r FROM Ride r " + "LEFT JOIN FETCH r.driver " + "LEFT JOIN FETCH r.route "
-            + "LEFT JOIN FETCH r.bookings b " + "LEFT JOIN FETCH b.passenger "
+    @Query("SELECT DISTINCT r FROM Ride r "
+            + "LEFT JOIN FETCH r.driver "
+            + "LEFT JOIN FETCH r.route "
+            + "LEFT JOIN FETCH r.bookings b "
+            + "LEFT JOIN FETCH b.passenger "
             + "WHERE r.departureTime BETWEEN :start AND :end")
     List<Ride> findRidesInDateRangeWithAllDetails(@Param("start") LocalDateTime start,
                                                   @Param("end") LocalDateTime end);

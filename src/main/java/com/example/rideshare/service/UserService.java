@@ -5,6 +5,7 @@ import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.UserMapper;
 import com.example.rideshare.model.User;
 import com.example.rideshare.repository.UserRepository;
+import com.example.rideshare.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,28 +24,44 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserDto getUserById(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        ValidationUtils.validateNotNull(id, "User ID");
+
+        User user = userRepository.findById(id).orElseThrow(() ->
+                new ResourceNotFoundException("User not found with id: " + id));
+
         return userMapper.toDto(user);
     }
 
     @Transactional
     public UserDto createUser(UserDto userDto) {
+        ValidationUtils.validateNotNull(userDto.getEmail(), "Email");
+        ValidationUtils.validateNotNull(userDto.getName(), "Name");
+        ValidationUtils.validateNotNull(userDto.getPhone(), "Phone");
+
+        if (userDto.getRating() != null) {
+            ValidationUtils.validateMin(userDto.getRating(), 0.0, "Rating");
+            ValidationUtils.validateMax(userDto.getRating(), 5.0, "Rating");
+        }
+
         User user = userMapper.toEntity(userDto);
         User savedUser = userRepository.save(user);
+
         return userMapper.toDto(savedUser);
     }
 
     @Transactional
     public UserDto updateUser(Long id, UserDto userDto) {
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        ValidationUtils.validateNotNull(id, "User ID");
+
+        User existingUser = userRepository.findById(id).orElseThrow(() ->
+                new ResourceNotFoundException("User not found with id: " + id));
 
         existingUser.setName(userDto.getName());
         existingUser.setEmail(userDto.getEmail());
         existingUser.setPhone(userDto.getPhone());
 
         User updatedUser = userRepository.save(existingUser);
+
         return userMapper.toDto(updatedUser);
     }
 
@@ -53,13 +70,15 @@ public class UserService {
         if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("User not found with id: " + id);
         }
+
         userRepository.deleteById(id);
     }
 
     @Transactional(readOnly = true)
     public UserDto getUserWithRides(Long id) {
-        User user = userRepository.findByIdWithRides(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        User user = userRepository.findByIdWithRides(id).orElseThrow(() ->
+                new ResourceNotFoundException("User not found with id: " + id));
+
         return userMapper.toDto(user);
     }
 }
