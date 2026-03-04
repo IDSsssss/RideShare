@@ -7,7 +7,6 @@ import com.example.rideshare.model.enums.BookingStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -55,6 +54,6 @@ public class BookingMapper {
             return List.of();
         }
 
-        return bookings.stream().map(this::toResponseDto).collect(Collectors.toList());
+        return bookings.stream().map(this::toResponseDto).toList();
     }
 }
