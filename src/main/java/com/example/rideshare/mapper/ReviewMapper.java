@@ -6,7 +6,6 @@ import com.example.rideshare.model.entity.Review;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -49,6 +48,6 @@ public class ReviewMapper {
             return List.of();
         }
 
-        return reviews.stream().map(this::toResponseDto).collect(Collectors.toList());
+        return reviews.stream().map(this::toResponseDto).toList();
     }
 }

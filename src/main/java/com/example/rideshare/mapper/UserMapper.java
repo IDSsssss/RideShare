@@ -5,7 +5,6 @@ import com.example.rideshare.model.dto.UserResponseDto;
 import com.example.rideshare.model.entity.User;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class UserMapper {
@@ -22,6 +21,7 @@ public class UserMapper {
         dto.setPhone(user.getPhone());
         dto.setRating(user.getRating());
         dto.setCreatedAt(user.getCreatedAt());
+
         return dto;
     }
 
@@ -35,6 +35,7 @@ public class UserMapper {
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
         user.setRating(dto.getRating() != null ? dto.getRating() : 0.0);
+
         return user;
     }
 
@@ -42,8 +43,7 @@ public class UserMapper {
         if (users == null) {
             return List.of();
         }
-        return users.stream()
-                .map(this::toResponseDto)
-                .collect(Collectors.toList());
+
+        return users.stream().map(this::toResponseDto).toList();
     }
 }

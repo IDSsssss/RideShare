@@ -5,7 +5,6 @@ import com.example.rideshare.model.dto.RouteResponseDto;
 import com.example.rideshare.model.entity.Route;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class RouteMapper {
@@ -22,6 +21,7 @@ public class RouteMapper {
         dto.setDistanceKm(route.getDistanceKm());
         dto.setEstimatedDurationMinutes(route.getEstimatedDurationMinutes());
         dto.setWaypoints(route.getWaypoints());
+
         return dto;
     }
 
@@ -36,6 +36,7 @@ public class RouteMapper {
         route.setDistanceKm(dto.getDistanceKm());
         route.setEstimatedDurationMinutes(dto.getEstimatedDurationMinutes());
         route.setWaypoints(dto.getWaypoints());
+
         return route;
     }
 
@@ -43,8 +44,7 @@ public class RouteMapper {
         if (routes == null) {
             return List.of();
         }
-        return routes.stream()
-                .map(this::toResponseDto)
-                .collect(Collectors.toList());
+
+        return routes.stream().map(this::toResponseDto).toList();
     }
 }

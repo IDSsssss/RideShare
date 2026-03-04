@@ -6,7 +6,6 @@ import com.example.rideshare.model.entity.Ride;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -57,6 +56,6 @@ public class RideMapper {
             return List.of();
         }
 
-        return rides.stream().map(this::toResponseDto).collect(Collectors.toList());
+        return rides.stream().map(this::toResponseDto).toList();
     }
 }
