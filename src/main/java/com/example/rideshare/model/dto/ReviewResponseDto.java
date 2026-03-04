@@ -1,14 +1,14 @@
-package com.example.rideshare.dto;
+package com.example.rideshare.model.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class ReviewDto {
+public class ReviewResponseDto {
     private Long id;
     private Integer rating;
     private String comment;
     private LocalDateTime createdAt;
-    private UserDto reviewer;
-    private RideDto ride;
+    private UserResponseDto reviewer;
+    private RideResponseDto ride;
 }

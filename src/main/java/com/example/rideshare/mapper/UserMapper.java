@@ -1,7 +1,8 @@
 package com.example.rideshare.mapper;
 
-import com.example.rideshare.dto.UserDto;
-import com.example.rideshare.model.User;
+import com.example.rideshare.model.dto.UserRequestDto;
+import com.example.rideshare.model.dto.UserResponseDto;
+import com.example.rideshare.model.entity.User;
 import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -9,12 +10,12 @@ import java.util.stream.Collectors;
 @Component
 public class UserMapper {
 
-    public UserDto toDto(User user) {
+    public UserResponseDto toResponseDto(User user) {
         if (user == null) {
             return null;
         }
 
-        UserDto dto = new UserDto();
+        UserResponseDto dto = new UserResponseDto();
         dto.setId(user.getId());
         dto.setName(user.getName());
         dto.setEmail(user.getEmail());
@@ -24,25 +25,25 @@ public class UserMapper {
         return dto;
     }
 
-    public User toEntity(UserDto dto) {
+    public User toEntity(UserRequestDto dto) {
         if (dto == null) {
             return null;
         }
 
         User user = new User();
-        user.setId(dto.getId());
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
-        user.setRating(dto.getRating());
-        user.setCreatedAt(dto.getCreatedAt());
+        user.setRating(dto.getRating() != null ? dto.getRating() : 0.0);
         return user;
     }
 
-    public List<UserDto> toDtoList(List<User> users) {
+    public List<UserResponseDto> toResponseDtoList(List<User> users) {
         if (users == null) {
             return List.of();
         }
-        return users.stream().map(this::toDto).collect(Collectors.toList());
+        return users.stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
     }
 }

@@ -1,19 +1,19 @@
-package com.example.rideshare.model;
+package com.example.rideshare.model.entity;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Column;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.JoinTable;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.ToString;
 import java.time.LocalDateTime;
@@ -25,7 +25,7 @@ import java.util.Set;
 @Data
 @Entity
 @Table(name = "rides")
-@ToString(exclude = {"driver", "bookings", "route", "passengers"})
+@ToString(exclude = {"driver", "bookings", "passengers"})
 public class Ride {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,23 +41,19 @@ public class Ride {
     private Double price;
 
     @Column(nullable = false)
-    private String status; // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+    private String status;
 
-    // ManyToOne: Много поездок может быть у одного водителя
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id", nullable = false)
     private User driver;
 
-    // OneToMany: Одна поездка может иметь много бронирований
     @OneToMany(mappedBy = "ride", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Booking> bookings = new ArrayList<>();
 
-    // OneToOne: У поездки один маршрут
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "route_id", unique = true)
     private Route route;
 
-    // ManyToMany: Пассажиры через бронирования
     @ManyToMany
     @JoinTable(
             name = "ride_passengers",

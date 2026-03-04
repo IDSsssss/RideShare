@@ -1,9 +1,9 @@
-package com.example.rideshare.dto;
+package com.example.rideshare.model.dto;
 
 import lombok.Data;
 
 @Data
-public class RouteDto {
+public class RouteResponseDto {
     private Long id;
     private String startPoint;
     private String endPoint;

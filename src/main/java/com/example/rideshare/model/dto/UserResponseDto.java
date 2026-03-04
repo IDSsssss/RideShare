@@ -1,10 +1,10 @@
-package com.example.rideshare.dto;
+package com.example.rideshare.model.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class UserDto {
+public class UserResponseDto {
     private Long id;
     private String name;
     private String email;

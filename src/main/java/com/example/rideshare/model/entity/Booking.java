@@ -1,15 +1,18 @@
-package com.example.rideshare.model;
+package com.example.rideshare.model.entity;
 
+import com.example.rideshare.model.enums.BookingStatus;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Column;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.Table;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -27,17 +30,16 @@ public class Booking {
     @Column(nullable = false)
     private Integer seats;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status; // PENDING, CONFIRMED, CANCELLED, COMPLETED
+    private BookingStatus status;
 
     private Double totalPrice;
 
-    // ManyToOne: Много бронирований у одного пассажира
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "passenger_id", nullable = false)
     private User passenger;
 
-    // ManyToOne: Много бронирований у одной поездки
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ride_id", nullable = false)
     private Ride ride;

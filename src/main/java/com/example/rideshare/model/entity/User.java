@@ -1,15 +1,15 @@
-package com.example.rideshare.model;
+package com.example.rideshare.model.entity;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Column;
+import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.ToString;
 import java.time.LocalDateTime;
@@ -39,15 +39,12 @@ public class User {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // OneToMany: Водитель может создавать много поездок
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Ride> ridesAsDriver = new ArrayList<>();
 
-    // OneToMany: Пользователь может делать много бронирований
     @OneToMany(mappedBy = "passenger", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Booking> bookings = new ArrayList<>();
 
-    // OneToMany: Пользователь может оставлять много отзывов
     @OneToMany(mappedBy = "reviewer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Review> reviews = new ArrayList<>();
 

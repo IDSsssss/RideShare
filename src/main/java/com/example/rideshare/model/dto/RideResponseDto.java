@@ -1,17 +1,17 @@
-package com.example.rideshare.dto;
+package com.example.rideshare.model.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class RideDto {
+public class RideResponseDto {
     private Long id;
     private LocalDateTime departureTime;
     private Integer availableSeats;
     private Double price;
     private String status;
-    private UserDto driver;
-    private RouteDto route;
-    private List<BookingDto> bookings;
+    private UserResponseDto driver;
+    private RouteResponseDto route;
+    private List<BookingResponseDto> bookings;
 }
