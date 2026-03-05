@@ -2,7 +2,7 @@
 
 📊 [Sonar](https://sonarcloud.io/summary/new_code?id=IDSsssss_RideShare&branch=main)
 
-📊 [ER - Diagram](ER-diagram.png)
+📊 [ER - Diagram](ER-diagram.png) 
 
 ## О проекте
 Система поиска попутчиков — REST API сервис для создания и управления поездками, позволяющий пользователям публиковать маршруты, находить подходящие предложения и координировать совместные поездки.
