@@ -32,20 +32,17 @@ public class RideServiceImpl implements RideService {
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
 
-    // Константы для сообщений об ошибках
     private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
     private static final String DRIVER_ID_NULL = "Driver ID cannot be null";
     private static final String DRIVER_NOT_FOUND = "Driver not found with id: ";
     private static final String INVALID_RIDE_STATUS = "Cannot %s ride that is not in SCHEDULED status";
 
-    // Константы для статусов
     private static final String STATUS_SCHEDULED = "SCHEDULED";
     private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
     private static final String STATUS_COMPLETED = "COMPLETED";
     private static final String STATUS_CANCELLED = "CANCELLED";
 
-    // Список допустимых статусов
     private static final List<String> VALID_STATUSES = List.of(
             STATUS_SCHEDULED, STATUS_IN_PROGRESS, STATUS_COMPLETED, STATUS_CANCELLED
     );

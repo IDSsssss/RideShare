@@ -83,7 +83,6 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(String.format(EMAIL_TAKEN, userDto.getEmail()));
         }
 
-        // Обновление полей
         if (userDto.getName() != null) {
             existingUser.setName(userDto.getName());
         }
