@@ -70,7 +70,7 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
-    //@Transactional
+    @Transactional
     public RideResponseDto createRide(RideRequestDto request) {
         log.debug("Creating new ride for driver id: {}", request.getDriverId());
 
@@ -100,9 +100,9 @@ public class RideServiceImpl implements RideService {
             driver.setRidesAsDriver(new ArrayList<>());
         }
         driver.getRidesAsDriver().add(savedRide);
-        throw new RuntimeException("Симуляция ошибки для проверки Rollback");
+        //throw new RuntimeException("Симуляция ошибки для проверки Rollback");
 
-        //return rideMapper.toResponseDto(savedRide);
+        return rideMapper.toResponseDto(savedRide);
     }
 
     @Override
