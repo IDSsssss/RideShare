@@ -13,8 +13,10 @@ import java.util.Optional;
 @Repository
 public interface RideRepository extends JpaRepository<Ride, Long> {
 
-    @EntityGraph(attributePaths = {"driver", "route"})
-    List<Ride> findByDriverId(Long driverId);
+    // Решение проблемы N+1 через @EntityGraph
+    @EntityGraph(attributePaths = {"driver", "route", "bookings", "bookings.passenger"})
+    @Query("SELECT r FROM Ride r")
+    List<Ride> findAllWithDetailsViaEntityGraph();
 
     @EntityGraph(attributePaths = {"driver", "route", "bookings"})
     @Query("SELECT r FROM Ride r WHERE r.departureTime > :currentTime")
@@ -28,9 +30,4 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
             + "WHERE r.departureTime BETWEEN :start AND :end")
     List<Ride> findRidesInDateRangeWithAllDetails(@Param("start") LocalDateTime start,
                                                   @Param("end") LocalDateTime end);
-
-    @Query("SELECT r FROM Ride r LEFT JOIN FETCH r.driver LEFT JOIN FETCH r.route WHERE r.id = :id")
-    Optional<Ride> findByIdWithDetails(@Param("id") Long id);
-
-    List<Ride> findByStatus(String status);
 }

@@ -51,7 +51,7 @@ public class RideServiceImpl implements RideService {
     @Transactional(readOnly = true)
     public List<RideResponseDto> getAllRides() {
         log.debug("Fetching all rides");
-        return rideMapper.toResponseDtoList(rideRepository.findAll());
+        return rideMapper.toResponseDtoList(rideRepository.findAllWithDetailsViaEntityGraph());
     }
 
     @Override
@@ -63,14 +63,14 @@ public class RideServiceImpl implements RideService {
             throw new BusinessException(RIDE_ID_NULL);
         }
 
-        Ride ride = rideRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
+        Ride ride = rideRepository.findById(id).orElseThrow(() ->
+                new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
         return rideMapper.toResponseDto(ride);
     }
 
     @Override
-    @Transactional
+    //@Transactional
     public RideResponseDto createRide(RideRequestDto request) {
         log.debug("Creating new ride for driver id: {}", request.getDriverId());
 
@@ -100,9 +100,9 @@ public class RideServiceImpl implements RideService {
             driver.setRidesAsDriver(new ArrayList<>());
         }
         driver.getRidesAsDriver().add(savedRide);
+        throw new RuntimeException("Симуляция ошибки для проверки Rollback");
 
-        log.info("Ride created successfully with id: {}", savedRide.getId());
-        return rideMapper.toResponseDto(savedRide);
+        //return rideMapper.toResponseDto(savedRide);
     }
 
     @Override
