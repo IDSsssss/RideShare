@@ -1,5 +1,6 @@
 package com.example.rideshare.model.entity;
 
+import com.example.rideshare.model.enums.RideStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,6 +15,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import lombok.Data;
 import lombok.ToString;
 import java.time.LocalDateTime;
@@ -21,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 @Entity
@@ -40,8 +44,9 @@ public class Ride {
     @Column(nullable = false)
     private Double price;
 
-    @Column(nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "ride_status")
+    private RideStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id", nullable = false)
@@ -54,11 +59,11 @@ public class Ride {
     @JoinColumn(name = "route_id", unique = true)
     private Route route;
 
-    @ManyToMany
-    @JoinTable(
-            name = "ride_passengers",
-            joinColumns = @JoinColumn(name = "ride_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> passengers = new HashSet<>();
+    // метод для получения пассажиров
+    public List<User> getPassengers() {
+        return bookings.stream().map(Booking::getPassenger).collect(Collectors.toList());
+    }
+
+    public void setPassengers(HashSet<Object> objects) {
+    }
 }

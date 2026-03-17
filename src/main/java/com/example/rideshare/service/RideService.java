@@ -16,9 +16,5 @@ public interface RideService {
 
     void deleteRide(Long id);
 
-    List<RideResponseDto> getUpcomingRidesWithDetails();
-
-    List<RideResponseDto> getRidesInDateRange(LocalDateTime start, LocalDateTime end);
-
     RideResponseDto updateRideStatus(Long id, String status);
 }

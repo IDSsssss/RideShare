@@ -13,8 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    List<User> findByNameContainingIgnoreCase(String name);
-
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.ridesAsDriver WHERE u.id = :id")
     Optional<User> findByIdWithRides(@Param("id") Long id);
 

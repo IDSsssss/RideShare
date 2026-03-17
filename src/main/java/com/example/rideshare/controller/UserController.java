@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -32,11 +31,6 @@ public class UserController extends BaseController {
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDto> getUserById(@PathVariable Long id) {
         return ok(userService.getUserById(id));
-    }
-
-    @GetMapping("/by-email")
-    public ResponseEntity<UserResponseDto> getUserByEmail(@RequestParam String email) {
-        return ok(userService.getUserByEmail(email));
     }
 
     @PostMapping

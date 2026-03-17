@@ -9,6 +9,7 @@ import com.example.rideshare.exception.BusinessException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.RideMapper;
 import com.example.rideshare.mapper.RouteMapper;
+import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.UserRepository;
@@ -50,15 +51,12 @@ public class RideServiceImpl implements RideService {
     @Override
     @Transactional(readOnly = true)
     public List<RideResponseDto> getAllRides() {
-        log.debug("Fetching all rides");
         return rideMapper.toResponseDtoList(rideRepository.findAllWithDetailsViaEntityGraph());
     }
 
     @Override
     @Transactional(readOnly = true)
     public RideResponseDto getRideById(Long id) {
-        log.debug("Fetching ride by id: {}", id);
-
         if (id == null) {
             throw new BusinessException(RIDE_ID_NULL);
         }
@@ -72,8 +70,6 @@ public class RideServiceImpl implements RideService {
     @Override
     @Transactional
     public RideResponseDto createRide(RideRequestDto request) {
-        log.debug("Creating new ride for driver id: {}", request.getDriverId());
-
         if (request.getDriverId() == null) {
             throw new BusinessException(DRIVER_ID_NULL);
         }
@@ -87,7 +83,7 @@ public class RideServiceImpl implements RideService {
 
         Ride ride = rideMapper.toEntity(request);
         ride.setDriver(driver);
-        ride.setStatus(STATUS_SCHEDULED);
+        ride.setStatus(RideStatus.SCHEDULED);
         ride.setBookings(new ArrayList<>());
         ride.setPassengers(new java.util.HashSet<>());
 
@@ -100,7 +96,7 @@ public class RideServiceImpl implements RideService {
             driver.setRidesAsDriver(new ArrayList<>());
         }
         driver.getRidesAsDriver().add(savedRide);
-        //throw new RuntimeException("Симуляция ошибки для проверки Rollback");
+        //throw new RuntimeException("Симуляция ошибки");
 
         return rideMapper.toResponseDto(savedRide);
     }
@@ -108,18 +104,12 @@ public class RideServiceImpl implements RideService {
     @Override
     @Transactional
     public RideResponseDto updateRide(Long id, RideRequestDto request) {
-        log.debug("Updating ride with id: {}", id);
-
         if (id == null) {
             throw new BusinessException(RIDE_ID_NULL);
         }
 
         Ride existingRide = rideRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
-
-        if (!STATUS_SCHEDULED.equals(existingRide.getStatus())) {
-            throw new BusinessException(String.format(INVALID_RIDE_STATUS, "update"));
-        }
 
         existingRide.setDepartureTime(request.getDepartureTime());
         existingRide.setAvailableSeats(request.getAvailableSeats());
@@ -132,7 +122,6 @@ public class RideServiceImpl implements RideService {
         }
 
         Ride updatedRide = rideRepository.save(existingRide);
-        log.info("Ride updated successfully with id: {}", updatedRide.getId());
 
         return rideMapper.toResponseDto(updatedRide);
     }
@@ -140,8 +129,6 @@ public class RideServiceImpl implements RideService {
     @Override
     @Transactional
     public void deleteRide(Long id) {
-        log.debug("Deleting ride with id: {}", id);
-
         if (id == null) {
             throw new BusinessException(RIDE_ID_NULL);
         }
@@ -149,49 +136,17 @@ public class RideServiceImpl implements RideService {
         Ride ride = rideRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
-        if (!STATUS_SCHEDULED.equals(ride.getStatus())) {
-            throw new BusinessException(String.format(INVALID_RIDE_STATUS, "delete"));
-        }
-
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
         if (bookedSeats != null && bookedSeats > 0) {
             throw new BusinessException("Cannot delete ride with existing bookings");
         }
 
         rideRepository.delete(ride);
-        log.info("Ride deleted successfully with id: {}", id);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<RideResponseDto> getUpcomingRidesWithDetails() {
-        log.debug("Fetching upcoming rides with details");
-        List<Ride> rides = rideRepository.findUpcomingRidesWithDetails(LocalDateTime.now());
-        return rideMapper.toResponseDtoList(rides);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<RideResponseDto> getRidesInDateRange(LocalDateTime start, LocalDateTime end) {
-        log.debug("Fetching rides in date range: {} - {}", start, end);
-
-        if (start == null || end == null) {
-            throw new BusinessException("Start and end dates must be provided");
-        }
-
-        if (start.isAfter(end)) {
-            throw new BusinessException("Start date must be before end date");
-        }
-
-        List<Ride> rides = rideRepository.findRidesInDateRangeWithAllDetails(start, end);
-        return rideMapper.toResponseDtoList(rides);
     }
 
     @Override
     @Transactional
     public RideResponseDto updateRideStatus(Long id, String status) {
-        log.debug("Updating ride status for id: {} to {}", id, status);
-
         if (id == null) {
             throw new BusinessException(RIDE_ID_NULL);
         }
@@ -214,9 +169,8 @@ public class RideServiceImpl implements RideService {
             }
         }
 
-        ride.setStatus(status);
+        ride.setStatus(RideStatus.valueOf(status));
         Ride updatedRide = rideRepository.save(ride);
-        log.info("Ride status updated successfully for id: {}", id);
 
         return rideMapper.toResponseDto(updatedRide);
     }

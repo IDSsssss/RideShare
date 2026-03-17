@@ -8,6 +8,7 @@ import com.example.rideshare.model.entity.User;
 import com.example.rideshare.exception.BusinessException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.ReviewMapper;
+import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.ReviewRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.UserRepository;
@@ -32,12 +33,10 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public ReviewResponseDto createReview(ReviewRequestDto request) {
-        log.debug("Creating review for ride: {} by user: {}", request.getRideId(), request.getReviewerId());
-
         Ride ride = rideRepository.findById(request.getRideId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + request.getRideId()));
 
-        if (!"COMPLETED".equals(ride.getStatus())) {
+        if (RideStatus.COMPLETED != ride.getStatus()) {
             throw new BusinessException("Cannot review ride that is not completed");
         }
 
@@ -64,15 +63,12 @@ public class ReviewServiceImpl implements ReviewService {
 
         updateDriverRating(ride.getDriver().getId());
 
-        log.info("Review created successfully with id: {}", savedReview.getId());
         return reviewMapper.toResponseDto(savedReview);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ReviewResponseDto> getReviewsByRide(Long rideId) {
-        log.debug("Fetching reviews for ride: {}", rideId);
-
         if (rideId == null) {
             throw new BusinessException("Ride ID cannot be null");
         }
@@ -84,8 +80,6 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public List<ReviewResponseDto> getReviewsByUser(Long userId) {
-        log.debug("Fetching reviews by user: {}", userId);
-
         if (userId == null) {
             throw new BusinessException("User ID cannot be null");
         }
@@ -97,8 +91,6 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public Double getAverageRatingForDriver(Long driverId) {
-        log.debug("Calculating average rating for driver: {}", driverId);
-
         Double avgRating = reviewRepository.getAverageRatingForDriver(driverId);
         return avgRating != null ? avgRating : 0.0;
     }
@@ -106,14 +98,11 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public void deleteReview(Long reviewId) {
-        log.debug("Deleting review with id: {}", reviewId);
-
         if (!reviewRepository.existsById(reviewId)) {
             throw new ResourceNotFoundException("Review not found with id: " + reviewId);
         }
 
         reviewRepository.deleteById(reviewId);
-        log.info("Review deleted successfully with id: {}", reviewId);
     }
 
     private void updateDriverRating(Long driverId) {

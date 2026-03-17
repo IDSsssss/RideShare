@@ -25,15 +25,12 @@ public class RouteServiceImpl implements RouteService {
     @Override
     @Transactional(readOnly = true)
     public List<RouteResponseDto> getAllRoutes() {
-        log.debug("Fetching all routes");
         return routeMapper.toResponseDtoList(routeRepository.findAll());
     }
 
     @Override
     @Transactional(readOnly = true)
     public RouteResponseDto getRouteById(Long id) {
-        log.debug("Fetching route by id: {}", id);
-
         if (id == null) {
             throw new BusinessException("Route ID cannot be null");
         }
@@ -47,11 +44,8 @@ public class RouteServiceImpl implements RouteService {
     @Override
     @Transactional
     public RouteResponseDto createRoute(RouteRequestDto routeDto) {
-        log.debug("Creating new route from {} to {}", routeDto.getStartPoint(), routeDto.getEndPoint());
-
         Route route = routeMapper.toEntity(routeDto);
         Route savedRoute = routeRepository.save(route);
-        log.info("Route created successfully with id: {}", savedRoute.getId());
 
         return routeMapper.toResponseDto(savedRoute);
     }
@@ -59,8 +53,6 @@ public class RouteServiceImpl implements RouteService {
     @Override
     @Transactional
     public RouteResponseDto updateRoute(Long id, RouteRequestDto routeDto) {
-        log.debug("Updating route with id: {}", id);
-
         Route existingRoute = routeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Route not found with id: " + id));
 
@@ -71,7 +63,6 @@ public class RouteServiceImpl implements RouteService {
         existingRoute.setWaypoints(routeDto.getWaypoints());
 
         Route updatedRoute = routeRepository.save(existingRoute);
-        log.info("Route updated successfully with id: {}", updatedRoute.getId());
 
         return routeMapper.toResponseDto(updatedRoute);
     }
@@ -79,30 +70,22 @@ public class RouteServiceImpl implements RouteService {
     @Override
     @Transactional
     public void deleteRoute(Long id) {
-        log.debug("Deleting route with id: {}", id);
-
         if (!routeRepository.existsById(id)) {
             throw new ResourceNotFoundException("Route not found with id: " + id);
         }
 
         routeRepository.deleteById(id);
-        log.info("Route deleted successfully with id: {}", id);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RouteResponseDto> findRoutesByStartAndEnd(String startPoint, String endPoint) {
-        log.debug("Finding routes from {} to {}", startPoint, endPoint);
-
         if (startPoint != null && endPoint != null) {
-            return routeMapper.toResponseDtoList(
-                    routeRepository.findByStartPointAndEndPoint(startPoint, endPoint));
+            return routeMapper.toResponseDtoList(routeRepository.findByStartPointAndEndPoint(startPoint, endPoint));
         } else if (startPoint != null) {
-            return routeMapper.toResponseDtoList(
-                    routeRepository.findByStartPointContainingIgnoreCase(startPoint));
+            return routeMapper.toResponseDtoList(routeRepository.findByStartPointContainingIgnoreCase(startPoint));
         } else if (endPoint != null) {
-            return routeMapper.toResponseDtoList(
-                    routeRepository.findByEndPointContainingIgnoreCase(endPoint));
+            return routeMapper.toResponseDtoList(routeRepository.findByEndPointContainingIgnoreCase(endPoint));
         }
 
         return List.of();

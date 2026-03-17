@@ -2,6 +2,8 @@ package com.example.rideshare.service;
 
 import com.example.rideshare.model.dto.BookingRequestDto;
 import com.example.rideshare.model.dto.BookingResponseDto;
+import com.example.rideshare.model.dto.UserResponseDto;
+
 import java.util.List;
 
 public interface BookingService {
@@ -9,9 +11,11 @@ public interface BookingService {
 
     BookingResponseDto cancelBooking(Long bookingId);
 
+    BookingResponseDto confirmBooking(Long bookingId);
+
     List<BookingResponseDto> getBookingsByUser(Long userId);
 
     List<BookingResponseDto> getBookingsByRide(Long rideId);
 
-    BookingResponseDto confirmBooking(Long bookingId);
+    List<UserResponseDto> getPassengersByRide(Long rideId);
 }

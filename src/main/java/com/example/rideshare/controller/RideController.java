@@ -5,7 +5,6 @@ import com.example.rideshare.model.dto.RideResponseDto;
 import com.example.rideshare.service.RideService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,9 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +22,6 @@ import java.util.Map;
 @RequestMapping("/rides")
 @RequiredArgsConstructor
 public class RideController extends BaseController {
-
     private final RideService rideService;
 
     @GetMapping
@@ -36,17 +32,6 @@ public class RideController extends BaseController {
     @GetMapping("/{id}")
     public ResponseEntity<RideResponseDto> getRideById(@PathVariable Long id) {
         return ok(rideService.getRideById(id));
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<RideResponseDto>> searchRides(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-
-        if (from != null && to != null) {
-            return ok(rideService.getRidesInDateRange(from, to));
-        }
-        return ok(rideService.getUpcomingRidesWithDetails());
     }
 
     @PostMapping

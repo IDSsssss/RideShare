@@ -31,15 +31,12 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserResponseDto> getAllUsers() {
-        log.debug("Fetching all users");
         return userMapper.toResponseDtoList(userRepository.findAll());
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponseDto getUserById(Long id) {
-        log.debug("Fetching user by id: {}", id);
-
         if (id == null) {
             throw new BusinessException(USER_ID_NULL);
         }
@@ -53,15 +50,12 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDto createUser(UserRequestDto userDto) {
-        log.debug("Creating new user with email: {}", userDto.getEmail());
-
         if (userRepository.existsByEmail(userDto.getEmail())) {
             throw new BusinessException(String.format(USER_EMAIL_EXISTS, userDto.getEmail()));
         }
 
         User user = userMapper.toEntity(userDto);
         User savedUser = userRepository.save(user);
-        log.info("User created successfully with id: {}", savedUser.getId());
 
         return userMapper.toResponseDto(savedUser);
     }
@@ -69,8 +63,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDto updateUser(Long id, UserRequestDto userDto) {
-        log.debug("Updating user with id: {}", id);
-
         if (id == null) {
             throw new BusinessException(USER_ID_NULL);
         }
@@ -97,7 +89,6 @@ public class UserServiceImpl implements UserService {
         }
 
         User updatedUser = userRepository.save(existingUser);
-        log.info("User updated successfully with id: {}", updatedUser.getId());
 
         return userMapper.toResponseDto(updatedUser);
     }
@@ -105,8 +96,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(Long id) {
-        log.debug("Deleting user with id: {}", id);
-
         if (id == null) {
             throw new BusinessException(USER_ID_NULL);
         }
@@ -116,14 +105,11 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.deleteById(id);
-        log.info("User deleted successfully with id: {}", id);
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponseDto getUserWithRides(Long id) {
-        log.debug("Fetching user with rides by id: {}", id);
-
         if (id == null) {
             throw new BusinessException(USER_ID_NULL);
         }
@@ -137,8 +123,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserResponseDto getUserByEmail(String email) {
-        log.debug("Fetching user by email: {}", email);
-
         if (email == null || email.trim().isEmpty()) {
             throw new BusinessException(EMAIL_NULL_EMPTY);
         }
