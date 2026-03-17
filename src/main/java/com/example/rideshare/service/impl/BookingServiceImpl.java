@@ -37,10 +37,10 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDto createBooking(BookingRequestDto request) {
         Ride ride = rideRepository.findById(request.getRideId())
-                .orElseThrow(() -> new ResourceNotFoundException("Поездка не найдена с ID: " + request.getRideId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with ID: " + request.getRideId()));
 
         if (RideStatus.SCHEDULED != ride.getStatus()) {
-            throw new BusinessException("Нельзя бронировать места в поездке со статусом: " + ride.getStatus());
+            throw new BusinessException("Cannot book seats in ride with status: " + ride.getStatus());
         }
 
         boolean alreadyBooked = bookingRepository.existsByPassengerIdAndRideIdAndStatusIn(
@@ -50,7 +50,7 @@ public class BookingServiceImpl implements BookingService {
         );
 
         if (alreadyBooked) {
-            throw new BusinessException("Пассажир уже имеет активное бронирование на эту поездку");
+            throw new BusinessException("Passenger already has an active booking for this ride");
         }
 
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(request.getRideId());
@@ -60,13 +60,13 @@ public class BookingServiceImpl implements BookingService {
 
         if (bookedSeats + request.getSeats() > ride.getAvailableSeats()) {
             throw new BusinessException(
-                    String.format("Недостаточно мест. Запрошено: %d, свободно: %d",
+                    String.format("Not enough seats available. Requested: %d, available: %d",
                             request.getSeats(), ride.getAvailableSeats() - bookedSeats)
             );
         }
 
         User passenger = userRepository.findById(request.getPassengerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Пассажир не найден с ID: "
+                .orElseThrow(() -> new ResourceNotFoundException("Passenger not found with ID: "
                         + request.getPassengerId()));
 
         Booking booking = new Booking();
@@ -88,14 +88,14 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDto cancelBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Бронирование не найдено с ID: " + bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with ID: " + bookingId));
 
         if (booking.getStatus() == BookingStatus.COMPLETED) {
-            throw new BusinessException("Нельзя отменить завершенное бронирование");
+            throw new BusinessException("Cannot cancel completed booking");
         }
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
-            throw new BusinessException("Бронирование уже отменено");
+            throw new BusinessException("Booking is already cancelled");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
@@ -108,10 +108,10 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDto confirmBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Бронирование не найдено с ID: " + bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with ID: " + bookingId));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new BusinessException("Можно подтвердить только бронирования со статусом PENDING");
+            throw new BusinessException("Only pending bookings can be confirmed");
         }
 
         booking.setStatus(BookingStatus.CONFIRMED);
@@ -124,7 +124,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public List<BookingResponseDto> getBookingsByUser(Long userId) {
         if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("Пользователь не найден с ID: " + userId);
+            throw new ResourceNotFoundException("User not found with ID: " + userId);
         }
 
         List<Booking> bookings = bookingRepository.findByPassengerId(userId);
@@ -135,7 +135,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public List<BookingResponseDto> getBookingsByRide(Long rideId) {
         if (!rideRepository.existsById(rideId)) {
-            throw new ResourceNotFoundException("Поездка не найдена с ID: " + rideId);
+            throw new ResourceNotFoundException("Ride not found with ID: " + rideId);
         }
 
         List<Booking> bookings = bookingRepository.findByRideId(rideId);
