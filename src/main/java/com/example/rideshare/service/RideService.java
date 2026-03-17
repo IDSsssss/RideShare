@@ -2,7 +2,6 @@ package com.example.rideshare.service;
 
 import com.example.rideshare.model.dto.RideRequestDto;
 import com.example.rideshare.model.dto.RideResponseDto;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface RideService {

@@ -63,7 +63,4 @@ public class Ride {
     public List<User> getPassengers() {
         return bookings.stream().map(Booking::getPassenger).collect(Collectors.toList());
     }
-
-    public void setPassengers(HashSet<Object> objects) {
-    }
 }

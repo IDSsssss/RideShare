@@ -37,7 +37,6 @@ public class RideServiceImpl implements RideService {
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
     private static final String DRIVER_ID_NULL = "Driver ID cannot be null";
     private static final String DRIVER_NOT_FOUND = "Driver not found with id: ";
-    private static final String INVALID_RIDE_STATUS = "Cannot %s ride that is not in SCHEDULED status";
 
     private static final String STATUS_SCHEDULED = "SCHEDULED";
     private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
@@ -85,7 +84,6 @@ public class RideServiceImpl implements RideService {
         ride.setDriver(driver);
         ride.setStatus(RideStatus.SCHEDULED);
         ride.setBookings(new ArrayList<>());
-        ride.setPassengers(new java.util.HashSet<>());
 
         Route route = routeMapper.toEntity(request.getRoute());
         ride.setRoute(route);
