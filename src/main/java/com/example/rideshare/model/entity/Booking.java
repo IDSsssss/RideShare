@@ -30,8 +30,8 @@ public class Booking {
     @Column(nullable = false)
     private Integer seats;
 
-    @Enumerated(EnumType.STRING)  // Всё равно используем STRING в Java
-    @Column(columnDefinition = "booking_status")  // Указываем, что в БД это наш enum тип
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "booking_status")
     private BookingStatus status;
 
     private Double totalPrice;

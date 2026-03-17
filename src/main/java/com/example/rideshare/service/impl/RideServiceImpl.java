@@ -93,8 +93,7 @@ public class RideServiceImpl implements RideService {
         if (driver.getRidesAsDriver() == null) {
             driver.setRidesAsDriver(new ArrayList<>());
         }
-        driver.getRidesAsDriver().add(savedRide);
-        //throw new RuntimeException("Симуляция ошибки");
+        driver.getRidesAsDriver().add(savedRide); //throw new RuntimeException("Симуляция ошибки");
 
         return rideMapper.toResponseDto(savedRide);
     }

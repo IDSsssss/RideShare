@@ -59,7 +59,6 @@ public class Ride {
     @JoinColumn(name = "route_id", unique = true)
     private Route route;
 
-    // метод для получения пассажиров
     public List<User> getPassengers() {
         return bookings.stream().map(Booking::getPassenger).collect(Collectors.toList());
     }

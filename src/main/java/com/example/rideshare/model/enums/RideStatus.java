@@ -4,8 +4,8 @@ import lombok.Getter;
 
 @Getter
 public enum RideStatus {
-    SCHEDULED,      // Запланирована
-    IN_PROGRESS,    // В процессе
-    COMPLETED,      // Завершена
-    CANCELLED       // Отменена
+    SCHEDULED,
+    IN_PROGRESS,
+    COMPLETED,
+    CANCELLED
 }
