@@ -26,7 +26,6 @@ public class UserServiceImpl implements UserService {
     private static final String USER_ID_NULL = "User ID cannot be null";
     private static final String USER_EMAIL_EXISTS = "User with email %s already exists";
     private static final String EMAIL_TAKEN = "Email %s is already taken";
-    private static final String EMAIL_NULL_EMPTY = "Email cannot be null or empty";
 
     @Override
     @Transactional(readOnly = true)
@@ -116,20 +115,6 @@ public class UserServiceImpl implements UserService {
 
         User user = userRepository.findByIdWithRides(id)
                 .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + id));
-
-        return userMapper.toResponseDto(user);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UserResponseDto getUserByEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            throw new BusinessException(EMAIL_NULL_EMPTY);
-        }
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format("User not found with email: %s", email)));
 
         return userMapper.toResponseDto(user);
     }
