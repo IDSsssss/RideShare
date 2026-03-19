@@ -1,6 +1,7 @@
 package com.example.rideshare.controller;
 
 import com.example.rideshare.model.dto.RideResponseDto;
+import com.example.rideshare.model.dto.RideSearchRequest;
 import com.example.rideshare.service.impl.RideSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,9 +37,18 @@ public class RideSearchController extends BaseController {
             @RequestParam(defaultValue = "false") boolean useNative,
             @PageableDefault(size = 10, sort = "departure_time", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        Page<RideResponseDto> result = rideSearchService.searchRides(
-                startPoint, endPoint, fromDate, toDate,
-                minPrice, maxPrice, minSeats, pageable, useNative);
+        RideSearchRequest request = new RideSearchRequest();
+        request.setStartPoint(startPoint);
+        request.setEndPoint(endPoint);
+        request.setFromDate(fromDate);
+        request.setToDate(toDate);
+        request.setMinPrice(minPrice);
+        request.setMaxPrice(maxPrice);
+        request.setMinSeats(minSeats);
+        request.setPageable(pageable);
+        request.setUseNative(useNative);
+
+        Page<RideResponseDto> result = rideSearchService.searchRides(request);
 
         return ok(result);
     }

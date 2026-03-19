@@ -76,7 +76,6 @@ public class RideSearchService {
         return resultPage;
     }
 
-
     public void invalidateCache() {
         cacheLock.writeLock().lock();
         try {
