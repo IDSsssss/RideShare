@@ -12,7 +12,6 @@ import com.example.rideshare.mapper.RouteMapper;
 import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
-import com.example.rideshare.repository.RouteRepository;
 import com.example.rideshare.repository.UserRepository;
 import com.example.rideshare.service.RideService;
 import lombok.RequiredArgsConstructor;
