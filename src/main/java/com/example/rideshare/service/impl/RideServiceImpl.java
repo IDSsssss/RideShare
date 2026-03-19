@@ -12,6 +12,7 @@ import com.example.rideshare.mapper.RouteMapper;
 import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
+import com.example.rideshare.repository.RouteRepository;
 import com.example.rideshare.repository.UserRepository;
 import com.example.rideshare.service.RideService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class RideServiceImpl implements RideService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final RouteRepository routeRepository;
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
     private final RideSearchService rideSearchService;
@@ -68,7 +70,6 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
-    @Transactional
     public RideResponseDto createRide(RideRequestDto request) {
         if (request.getDriverId() == null) {
             throw new BusinessException(DRIVER_ID_NULL);
@@ -97,6 +98,10 @@ public class RideServiceImpl implements RideService {
         driver.getRidesAsDriver().add(savedRide);
 
         rideSearchService.invalidateCache();
+
+        if (request.getPrice() > 5000) {
+            throw new BusinessException("DEMO ERROR: ");
+        }
 
         return rideMapper.toResponseDto(savedRide);
     }

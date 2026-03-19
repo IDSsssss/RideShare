@@ -14,7 +14,7 @@ public class BookingResponseDto {
     private UserResponseDto passenger;
     private RideResponseDto ride;
 
-    @JsonProperty("totalPrice")  // Явно указываем имя поля в JSON
+    @JsonProperty("totalPrice")
     public Double getTotalPrice() {
         if (ride != null && ride.getPrice() != null && seats != null) {
             return ride.getPrice() * seats;

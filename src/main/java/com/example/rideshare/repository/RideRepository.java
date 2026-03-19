@@ -15,7 +15,6 @@ import java.util.List;
 @Repository
 public interface RideRepository extends JpaRepository<Ride, Long> {
 
-    // Решение проблемы N+1 через @EntityGraph
     @EntityGraph(attributePaths = {"driver", "route", "bookings", "bookings.passenger"})
     @Query("SELECT r FROM Ride r")
     List<Ride> findAllWithDetailsViaEntityGraph();
