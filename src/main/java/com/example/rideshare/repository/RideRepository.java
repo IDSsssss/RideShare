@@ -1,5 +1,6 @@
 package com.example.rideshare.repository;
 
+import com.example.rideshare.model.dto.RideSearchRequest;
 import com.example.rideshare.model.entity.Ride;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,15 +42,7 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
             + "AND (cast(:minPrice as double) IS NULL OR r.price >= :minPrice) "
             + "AND (cast(:maxPrice as double) IS NULL OR r.price <= :maxPrice) "
             + "AND (cast(:minSeats as integer) IS NULL OR r.availableSeats >= :minSeats)")
-    Page<Ride> searchRidesWithFilters(
-            @Param("startPoint") String startPoint,
-            @Param("endPoint") String endPoint,
-            @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate,
-            @Param("minPrice") Double minPrice,
-            @Param("maxPrice") Double maxPrice,
-            @Param("minSeats") Integer minSeats,
-            Pageable pageable);
+    Page<Ride> searchRidesWithFilters(@Param("request") RideSearchRequest request, Pageable pageable);
 
     @Query(value = "SELECT DISTINCT r.* FROM rides r "
             + "JOIN routes rt ON r.route_id = rt.id "
@@ -70,13 +63,5 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
                     + "AND (cast(:maxPrice as numeric) IS NULL OR r.price <= :maxPrice) "
                     + "AND (cast(:minSeats as integer) IS NULL OR r.available_seats >= :minSeats)",
             nativeQuery = true)
-    Page<Ride> searchRidesNative(
-            @Param("startPoint") String startPoint,
-            @Param("endPoint") String endPoint,
-            @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate,
-            @Param("minPrice") Double minPrice,
-            @Param("maxPrice") Double maxPrice,
-            @Param("minSeats") Integer minSeats,
-            Pageable pageable);
+    Page<Ride> searchRidesNative(@Param("request") RideSearchRequest request, Pageable pageable);
 }
