@@ -9,10 +9,8 @@ import com.example.rideshare.mapper.RideMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,31 +76,6 @@ public class RideSearchService {
         return resultPage;
     }
 
-    @Transactional(readOnly = true)
-    public Page<RideResponseDto> searchRides(
-            String startPoint,
-            String endPoint,
-            LocalDateTime fromDate,
-            LocalDateTime toDate,
-            Double minPrice,
-            Double maxPrice,
-            Integer minSeats,
-            Pageable pageable,
-            boolean useNative) {
-
-        RideSearchRequest request = new RideSearchRequest();
-        request.setStartPoint(startPoint);
-        request.setEndPoint(endPoint);
-        request.setFromDate(fromDate);
-        request.setToDate(toDate);
-        request.setMinPrice(minPrice);
-        request.setMaxPrice(maxPrice);
-        request.setMinSeats(minSeats);
-        request.setPageable(pageable);
-        request.setUseNative(useNative);
-
-        return searchRides(request);
-    }
 
     public void invalidateCache() {
         cacheLock.writeLock().lock();
