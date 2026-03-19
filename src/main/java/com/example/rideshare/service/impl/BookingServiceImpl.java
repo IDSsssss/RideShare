@@ -1,6 +1,5 @@
 package com.example.rideshare.service.impl;
 
-import com.example.rideshare.mapper.UserMapper;
 import com.example.rideshare.model.dto.BookingRequestDto;
 import com.example.rideshare.model.dto.BookingResponseDto;
 import com.example.rideshare.model.entity.Booking;
@@ -15,7 +14,6 @@ import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.UserRepository;
 import com.example.rideshare.service.BookingService;
-import com.example.rideshare.model.dto.UserResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +29,6 @@ public class BookingServiceImpl implements BookingService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
-    private final UserMapper userMapper;
 
     @Override
     @Transactional
@@ -139,12 +136,5 @@ public class BookingServiceImpl implements BookingService {
 
         List<Booking> bookings = bookingRepository.findByRideId(rideId);
         return bookingMapper.toResponseDtoList(bookings);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UserResponseDto> getPassengersByRide(Long rideId) {
-        List<User> passengers = bookingRepository.findPassengersByRideId(rideId);
-        return userMapper.toResponseDtoList(passengers);
     }
 }
