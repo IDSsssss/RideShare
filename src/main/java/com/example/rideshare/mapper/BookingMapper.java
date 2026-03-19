@@ -25,7 +25,6 @@ public class BookingMapper {
         dto.setBookingTime(booking.getBookingTime());
         dto.setSeats(booking.getSeats());
         dto.setStatus(booking.getStatus());
-        dto.setTotalPrice(booking.getTotalPrice());
 
         if (booking.getPassenger() != null) {
             dto.setPassenger(userMapper.toResponseDto(booking.getPassenger()));

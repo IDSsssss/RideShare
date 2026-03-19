@@ -1,6 +1,7 @@
 package com.example.rideshare.model.dto;
 
 import com.example.rideshare.model.enums.BookingStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -10,7 +11,14 @@ public class BookingResponseDto {
     private LocalDateTime bookingTime;
     private Integer seats;
     private BookingStatus status;
-    private Double totalPrice;
     private UserResponseDto passenger;
     private RideResponseDto ride;
+
+    @JsonProperty("totalPrice")  // Явно указываем имя поля в JSON
+    public Double getTotalPrice() {
+        if (ride != null && ride.getPrice() != null && seats != null) {
+            return ride.getPrice() * seats;
+        }
+        return null;
+    }
 }

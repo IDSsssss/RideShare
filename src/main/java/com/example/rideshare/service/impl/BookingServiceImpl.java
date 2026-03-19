@@ -74,7 +74,6 @@ public class BookingServiceImpl implements BookingService {
         booking.setPassenger(passenger);
         booking.setSeats(request.getSeats());
         booking.setStatus(BookingStatus.PENDING);
-        booking.setTotalPrice(ride.getPrice() * request.getSeats());
 
         Booking savedBooking = bookingRepository.save(booking);
 

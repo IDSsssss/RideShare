@@ -32,6 +32,7 @@ public class RideServiceImpl implements RideService {
     private final BookingRepository bookingRepository;
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
+    private final RideSearchService rideSearchService;
 
     private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
@@ -95,6 +96,8 @@ public class RideServiceImpl implements RideService {
         }
         driver.getRidesAsDriver().add(savedRide); //throw new RuntimeException("Симуляция ошибки");
 
+        rideSearchService.invalidateCache();
+
         return rideMapper.toResponseDto(savedRide);
     }
 
@@ -119,6 +122,7 @@ public class RideServiceImpl implements RideService {
         }
 
         Ride updatedRide = rideRepository.save(existingRide);
+        rideSearchService.invalidateCache();
 
         return rideMapper.toResponseDto(updatedRide);
     }
@@ -139,6 +143,8 @@ public class RideServiceImpl implements RideService {
         }
 
         rideRepository.delete(ride);
+
+        rideSearchService.invalidateCache();
     }
 
     @Override

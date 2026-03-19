@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @Data
 @Entity
 @Table(name = "rides")
-@ToString(exclude = {"driver", "bookings", "passengers"})
+@ToString(exclude = {"driver", "bookings"})
 public class Ride {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
