@@ -68,6 +68,7 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
+    @Transactional
     public RideResponseDto createRide(RideRequestDto request) {
         if (request.getDriverId() == null) {
             throw new BusinessException(DRIVER_ID_NULL);

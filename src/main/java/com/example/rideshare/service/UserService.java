@@ -16,6 +16,4 @@ public interface UserService {
     void deleteUser(Long id);
 
     UserResponseDto getUserWithRides(Long id);
-
-    UserResponseDto getUserByEmail(String email);
 }
