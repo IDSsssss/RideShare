@@ -98,7 +98,7 @@ public class RideServiceImpl implements RideService {
         rideSearchService.invalidateCache();
 
         if (request.getPrice() > 5000) {
-            throw new BusinessException("DEMO ERROR: ");
+            throw new BusinessException("DEMO ERROR");
         }
 
         return rideMapper.toResponseDto(savedRide);
