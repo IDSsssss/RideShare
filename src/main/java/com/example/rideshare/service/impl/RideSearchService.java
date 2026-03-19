@@ -15,6 +15,7 @@ import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Slf4j
@@ -30,7 +31,7 @@ public class RideSearchService {
     private final ReentrantReadWriteLock cacheLock = new ReentrantReadWriteLock();
 
     // Счетчик изменений для инвалидации кэша
-    private volatile long modificationCount = 0;
+    private final AtomicLong modificationCount = new AtomicLong(0);
     private long lastCacheModificationCount = -1;
 
     /**
@@ -62,7 +63,7 @@ public class RideSearchService {
         cacheLock.readLock().lock();
         try {
             // Проверяем, актуален ли кэш
-            if (modificationCount == lastCacheModificationCount && searchCache.containsKey(cacheKey)) {
+            if (modificationCount.get() == lastCacheModificationCount && searchCache.containsKey(cacheKey)) {
                 log.info("Cache hit for key: {}", cacheKey);
                 return searchCache.get(cacheKey);
             }
@@ -90,7 +91,7 @@ public class RideSearchService {
         cacheLock.writeLock().lock();
         try {
             searchCache.put(cacheKey, resultPage);
-            lastCacheModificationCount = modificationCount;
+            lastCacheModificationCount = modificationCount.get();
             log.info("Cached result for key: {}, cache size: {}", cacheKey, searchCache.size());
         } finally {
             cacheLock.writeLock().unlock();
@@ -106,7 +107,7 @@ public class RideSearchService {
     public void invalidateCache() {
         cacheLock.writeLock().lock();
         try {
-            modificationCount++;
+            modificationCount.incrementAndGet();
             searchCache.clear();
             log.info("Cache invalidated. Modification count: {}", modificationCount);
         } finally {
