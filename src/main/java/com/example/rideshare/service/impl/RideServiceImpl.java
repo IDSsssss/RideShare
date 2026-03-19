@@ -31,7 +31,6 @@ public class RideServiceImpl implements RideService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
-    private final RouteRepository routeRepository;
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
     private final RideSearchService rideSearchService;
