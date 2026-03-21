@@ -2,6 +2,8 @@ package com.example.rideshare.service.impl;
 
 import com.example.rideshare.model.dto.RideRequestDto;
 import com.example.rideshare.model.dto.RideResponseDto;
+import com.example.rideshare.model.dto.RideSearchCriteria;
+import com.example.rideshare.model.dto.RideSearchRequest;
 import com.example.rideshare.model.entity.Ride;
 import com.example.rideshare.model.entity.Route;
 import com.example.rideshare.model.entity.User;
@@ -16,11 +18,16 @@ import com.example.rideshare.repository.UserRepository;
 import com.example.rideshare.service.RideService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Slf4j
 @Service
@@ -32,7 +39,10 @@ public class RideServiceImpl implements RideService {
     private final BookingRepository bookingRepository;
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
-    private final RideSearchService rideSearchService;
+    private final Map<RideSearchCriteria, Page<RideResponseDto>> searchCache = new HashMap<>();
+    private final ReentrantReadWriteLock cacheLock = new ReentrantReadWriteLock();
+    private final AtomicLong modificationCount = new AtomicLong(0);
+    private long lastCacheModificationCount = -1;
 
     private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
@@ -96,11 +106,7 @@ public class RideServiceImpl implements RideService {
         }
         driver.getRidesAsDriver().add(savedRide);
 
-        rideSearchService.invalidateCache();
-
-        if (request.getPrice() > 5000) {
-            throw new BusinessException("DEMO ERROR");
-        }
+        this.invalidateCache();
 
         return rideMapper.toResponseDto(savedRide);
     }
@@ -126,7 +132,7 @@ public class RideServiceImpl implements RideService {
         }
 
         Ride updatedRide = rideRepository.save(existingRide);
-        rideSearchService.invalidateCache();
+        this.invalidateCache();
 
         return rideMapper.toResponseDto(updatedRide);
     }
@@ -148,7 +154,7 @@ public class RideServiceImpl implements RideService {
 
         rideRepository.delete(ride);
 
-        rideSearchService.invalidateCache();
+        this.invalidateCache();
     }
 
     @Override
@@ -180,5 +186,86 @@ public class RideServiceImpl implements RideService {
         Ride updatedRide = rideRepository.save(ride);
 
         return rideMapper.toResponseDto(updatedRide);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<RideResponseDto> searchRides(RideSearchRequest request) {
+        RideSearchCriteria cacheKey = new RideSearchCriteria(
+                request.getStartPoint(),
+                request.getEndPoint(),
+                request.getFromDate(),
+                request.getToDate(),
+                request.getMinPrice(),
+                request.getMaxPrice(),
+                request.getMinSeats()
+        );
+
+        cacheLock.readLock().lock();
+        try {
+            if (modificationCount.get() == lastCacheModificationCount && searchCache.containsKey(cacheKey)) {
+                return searchCache.get(cacheKey);
+            }
+        } finally {
+            cacheLock.readLock().unlock();
+        }
+
+        Page<Ride> ridePage;
+        if (request.isUseNative()) {
+            ridePage = rideRepository.searchRidesNative(
+                    request.getStartPoint(),
+                    request.getEndPoint(),
+                    request.getFromDate(),
+                    request.getToDate(),
+                    request.getMinPrice(),
+                    request.getMaxPrice(),
+                    request.getMinSeats(),
+                    request.getPageable());
+        } else {
+            ridePage = rideRepository.searchRides(
+                    request.getStartPoint(),
+                    request.getEndPoint(),
+                    request.getFromDate(),
+                    request.getToDate(),
+                    request.getMinPrice(),
+                    request.getMaxPrice(),
+                    request.getMinSeats(),
+                    request.getPageable());
+        }
+
+        Page<RideResponseDto> resultPage = ridePage.map(rideMapper::toResponseDto);
+
+        cacheLock.writeLock().lock();
+        try {
+            searchCache.put(cacheKey, resultPage);
+            lastCacheModificationCount = modificationCount.get();
+        } finally {
+            cacheLock.writeLock().unlock();
+        }
+
+        return resultPage;
+    }
+
+    public void invalidateCache() {
+        cacheLock.writeLock().lock();
+        try {
+            modificationCount.incrementAndGet();
+            searchCache.clear();
+            log.info("Cache invalidated. Modification count: {}", modificationCount.get());
+        } finally {
+            cacheLock.writeLock().unlock();
+        }
+    }
+
+    public Map<String, Object> getCacheStats() {
+        cacheLock.readLock().lock();
+        try {
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("cacheSize", searchCache.size());
+            stats.put("modificationCount", modificationCount.get());
+            stats.put("cacheKeys", searchCache.keySet());
+            return stats;
+        } finally {
+            cacheLock.readLock().unlock();
+        }
     }
 }
