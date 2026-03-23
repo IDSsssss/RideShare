@@ -76,7 +76,7 @@ public class RideController extends BaseController {
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) Integer minSeats,
             @RequestParam(defaultValue = "false") boolean useNative,
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault() Pageable pageable) {
 
         Pageable convertedPageable = pageable;
 
