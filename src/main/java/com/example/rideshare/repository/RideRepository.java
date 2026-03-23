@@ -19,6 +19,7 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     @Query("SELECT r FROM Ride r")
     List<Ride> findAllWithDetailsViaEntityGraph();
 
+    @EntityGraph(attributePaths = {"driver", "route", "bookings", "bookings.passenger"})
     @Query("SELECT DISTINCT r FROM Ride r "
             + "JOIN r.route rt "
             + "WHERE (cast(:startPoint as string) IS NULL OR rt.startPoint LIKE %:startPoint%) "
@@ -38,6 +39,7 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
             @Param("minSeats") Integer minSeats,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {"driver", "route", "bookings", "bookings.passenger"})
     @Query(value = "SELECT DISTINCT r.* FROM rides r "
             + "JOIN routes rt ON r.route_id = rt.id "
             + "WHERE (CAST(:startPoint AS VARCHAR) IS NULL OR rt.start_point ILIKE CONCAT('%', "
