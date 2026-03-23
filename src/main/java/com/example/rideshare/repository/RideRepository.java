@@ -29,15 +29,14 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
             + "AND (cast(:minPrice as double) IS NULL OR r.price >= :minPrice) "
             + "AND (cast(:maxPrice as double) IS NULL OR r.price <= :maxPrice) "
             + "AND (cast(:minSeats as integer) IS NULL OR r.availableSeats >= :minSeats)")
-    Page<Ride> searchRides(
+    List<Ride> searchRides(
             @Param("startPoint") String startPoint,
             @Param("endPoint") String endPoint,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             @Param("minPrice") Double minPrice,
             @Param("maxPrice") Double maxPrice,
-            @Param("minSeats") Integer minSeats,
-            Pageable pageable);
+            @Param("minSeats") Integer minSeats);
 
     @EntityGraph(attributePaths = {"driver", "route", "bookings", "bookings.passenger"})
     @Query(value = "SELECT DISTINCT r.* FROM rides r "
@@ -63,13 +62,12 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
                     + "AND (CAST(:maxPrice AS NUMERIC) IS NULL OR r.price <= CAST(:maxPrice AS NUMERIC)) "
                     + "AND (CAST(:minSeats AS INTEGER) IS NULL OR r.available_seats >= CAST(:minSeats AS INTEGER))",
             nativeQuery = true)
-    Page<Ride> searchRidesNative(
+    List<Ride> searchRidesNative(
             @Param("startPoint") String startPoint,
             @Param("endPoint") String endPoint,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             @Param("minPrice") Double minPrice,
             @Param("maxPrice") Double maxPrice,
-            @Param("minSeats") Integer minSeats,
-            Pageable pageable);
+            @Param("minSeats") Integer minSeats);
 }

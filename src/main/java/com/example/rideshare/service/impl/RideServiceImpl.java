@@ -19,6 +19,8 @@ import com.example.rideshare.service.RideService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -200,46 +202,71 @@ public class RideServiceImpl implements RideService {
                 request.getMinSeats()
         );
 
+        List<RideResponseDto> cachedData = null;
+
         cacheLock.readLock().lock();
         try {
             if (modificationCount.get() == lastCacheModificationCount && searchCache.containsKey(cacheKey)) {
-                return searchCache.get(cacheKey);
+                Page<RideResponseDto> cachedPage = searchCache.get(cacheKey);
+                cachedData = cachedPage.getContent();
             }
         } finally {
             cacheLock.readLock().unlock();
         }
 
-        Page<Ride> ridePage;
-        if (request.isUseNative()) {
-            ridePage = rideRepository.searchRidesNative(
-                    request.getStartPoint(),
-                    request.getEndPoint(),
-                    request.getFromDate(),
-                    request.getToDate(),
-                    request.getMinPrice(),
-                    request.getMaxPrice(),
-                    request.getMinSeats(),
-                    request.getPageable());
+        Page<RideResponseDto> resultPage;
+
+        if (cachedData != null) {
+            int start = (int) request.getPageable().getOffset();
+            int end = Math.min(start + request.getPageable().getPageSize(), cachedData.size());
+
+            List<RideResponseDto> pagedContent = start < cachedData.size()
+                    ? cachedData.subList(start, end)
+                    : List.of();
+
+            resultPage = new PageImpl<>(pagedContent, request.getPageable(), cachedData.size());
         } else {
-            ridePage = rideRepository.searchRides(
-                    request.getStartPoint(),
-                    request.getEndPoint(),
-                    request.getFromDate(),
-                    request.getToDate(),
-                    request.getMinPrice(),
-                    request.getMaxPrice(),
-                    request.getMinSeats(),
-                    request.getPageable());
-        }
+            List<Ride> allRides;
+            if (request.isUseNative()) {
+                allRides = rideRepository.searchRidesNative(
+                        request.getStartPoint(),
+                        request.getEndPoint(),
+                        request.getFromDate(),
+                        request.getToDate(),
+                        request.getMinPrice(),
+                        request.getMaxPrice(),
+                        request.getMinSeats());
+            } else {
+                allRides = rideRepository.searchRides(
+                        request.getStartPoint(),
+                        request.getEndPoint(),
+                        request.getFromDate(),
+                        request.getToDate(),
+                        request.getMinPrice(),
+                        request.getMaxPrice(),
+                        request.getMinSeats());
+            }
 
-        Page<RideResponseDto> resultPage = ridePage.map(rideMapper::toResponseDto);
+            List<RideResponseDto> allData = allRides.stream()
+                    .map(rideMapper::toResponseDto)
+                    .toList();
 
-        cacheLock.writeLock().lock();
-        try {
-            searchCache.put(cacheKey, resultPage);
-            lastCacheModificationCount = modificationCount.get();
-        } finally {
-            cacheLock.writeLock().unlock();
+            cacheLock.writeLock().lock();
+            try {
+                Page<RideResponseDto> fullPage = new PageImpl<>(allData, Pageable.unpaged(), allData.size());
+                searchCache.put(cacheKey, fullPage);
+                lastCacheModificationCount = modificationCount.get();
+            } finally {
+                cacheLock.writeLock().unlock();
+            }
+
+            int start = (int) request.getPageable().getOffset();
+            int end = Math.min(start + request.getPageable().getPageSize(), allData.size());
+            List<RideResponseDto> pagedContent = start < allData.size()
+                    ? allData.subList(start, end)
+                    : List.of();
+
+            resultPage = new PageImpl<>(pagedContent, request.getPageable(), allData.size());
         }
 
         return resultPage;
@@ -250,7 +277,6 @@ public class RideServiceImpl implements RideService {
         try {
             modificationCount.incrementAndGet();
             searchCache.clear();
-            log.info("Cache invalidated. Modification count: {}", modificationCount.get());
         } finally {
             cacheLock.writeLock().unlock();
         }
