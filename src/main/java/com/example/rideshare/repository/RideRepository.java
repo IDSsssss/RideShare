@@ -36,7 +36,6 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
             @Param("maxPrice") Double maxPrice,
             @Param("minSeats") Integer minSeats);
 
-    @EntityGraph(attributePaths = {"driver", "route", "bookings", "bookings.passenger"})
     @Query(value = "SELECT DISTINCT r.* FROM rides r "
             + "JOIN routes rt ON r.route_id = rt.id "
             + "WHERE (CAST(:startPoint AS VARCHAR) IS NULL OR rt.start_point ILIKE CONCAT('%', "
