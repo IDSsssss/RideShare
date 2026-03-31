@@ -28,7 +28,7 @@ public class UserRequestDto {
 
     @Schema(description = "Phone number", example = "+79001234567", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Phone is required")
-    @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone must be 10-15 digits, optionally starting with +")
+    @Pattern(regexp = "^\\+?\\d{10,15}$", message = "Phone must be 10-15 digits, optionally starting with +")
     private String phone;
 
     @Schema(description = "User rating", example = "4.5", minimum = "0", maximum = "5")
