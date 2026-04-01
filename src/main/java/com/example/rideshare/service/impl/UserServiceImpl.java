@@ -1,5 +1,6 @@
 package com.example.rideshare.service.impl;
 
+import com.example.rideshare.exception.ConflictException;
 import com.example.rideshare.model.dto.UserRequestDto;
 import com.example.rideshare.model.dto.UserResponseDto;
 import com.example.rideshare.model.entity.User;
@@ -50,7 +51,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponseDto createUser(UserRequestDto userDto) {
         if (userRepository.existsByEmail(userDto.getEmail())) {
-            throw new BusinessException(String.format(USER_EMAIL_EXISTS, userDto.getEmail()));
+            throw new ConflictException(String.format(USER_EMAIL_EXISTS, userDto.getEmail()));
         }
 
         User user = userMapper.toEntity(userDto);
@@ -71,7 +72,7 @@ public class UserServiceImpl implements UserService {
 
         if (userDto.getEmail() != null && !userDto.getEmail()
                 .equals(existingUser.getEmail()) && userRepository.existsByEmail(userDto.getEmail())) {
-            throw new BusinessException(String.format(EMAIL_TAKEN, userDto.getEmail()));
+            throw new ConflictException(String.format(EMAIL_TAKEN, userDto.getEmail()));
         }
 
         if (userDto.getName() != null) {

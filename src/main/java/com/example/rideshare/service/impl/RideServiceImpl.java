@@ -50,6 +50,11 @@ public class RideServiceImpl implements RideService {
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
     private static final String DRIVER_ID_NULL = "Driver ID cannot be null";
     private static final String DRIVER_NOT_FOUND = "Driver not found with id: ";
+    private static final String TIME_IN_FUTURE = "Departure time must be in the future";
+    private static final String CANNOT_DELETE = "Cannot delete ride with existing bookings";
+    private static final String CANNOT_CANCEL = "Cannot cancel ride with existing bookings";
+    private static final String INVALID_STATUS = "Invalid status: ";
+    private static final String STATUS_IS_NULL = "Status cannot be null or empty";
 
     private static final String STATUS_SCHEDULED = "SCHEDULED";
     private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
@@ -90,7 +95,7 @@ public class RideServiceImpl implements RideService {
                 .orElseThrow(() -> new ResourceNotFoundException(DRIVER_NOT_FOUND + request.getDriverId()));
 
         if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("Departure time must be in the future");
+            throw new BusinessException(TIME_IN_FUTURE);
         }
 
         Ride ride = rideMapper.toEntity(request);
@@ -151,7 +156,7 @@ public class RideServiceImpl implements RideService {
 
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
         if (bookedSeats != null && bookedSeats > 0) {
-            throw new BusinessException("Cannot delete ride with existing bookings");
+            throw new BusinessException(CANNOT_DELETE);
         }
 
         rideRepository.delete(ride);
@@ -167,20 +172,20 @@ public class RideServiceImpl implements RideService {
         }
 
         if (status == null || status.trim().isEmpty()) {
-            throw new BusinessException("Status cannot be null or empty");
+            throw new BusinessException(STATUS_IS_NULL);
         }
 
         Ride ride = rideRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
         if (!VALID_STATUSES.contains(status)) {
-            throw new BusinessException("Invalid status: " + status);
+            throw new BusinessException(INVALID_STATUS + status);
         }
 
         if (STATUS_CANCELLED.equals(status)) {
             Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
             if (bookedSeats != null && bookedSeats > 0) {
-                throw new BusinessException("Cannot cancel ride with existing bookings");
+                throw new BusinessException(CANNOT_CANCEL);
             }
         }
 

@@ -22,6 +22,9 @@ public class RouteServiceImpl implements RouteService {
     private final RouteRepository routeRepository;
     private final RouteMapper routeMapper;
 
+    private static final String ROUTE_NOT_FOUND = "Route not found with id: ";
+    private static final String ROUTE_ID_NULL = "Route ID cannot be null";
+
     @Override
     @Transactional(readOnly = true)
     public List<RouteResponseDto> getAllRoutes() {
@@ -32,11 +35,10 @@ public class RouteServiceImpl implements RouteService {
     @Transactional(readOnly = true)
     public RouteResponseDto getRouteById(Long id) {
         if (id == null) {
-            throw new BusinessException("Route ID cannot be null");
+            throw new BusinessException(ROUTE_ID_NULL);
         }
 
-        Route route = routeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Route not found with id: " + id));
+        Route route = routeRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(ROUTE_NOT_FOUND + id));
 
         return routeMapper.toResponseDto(route);
     }
@@ -54,7 +56,7 @@ public class RouteServiceImpl implements RouteService {
     @Transactional
     public RouteResponseDto updateRoute(Long id, RouteRequestDto routeDto) {
         Route existingRoute = routeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Route not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ROUTE_NOT_FOUND + id));
 
         existingRoute.setStartPoint(routeDto.getStartPoint());
         existingRoute.setEndPoint(routeDto.getEndPoint());
@@ -71,7 +73,7 @@ public class RouteServiceImpl implements RouteService {
     @Transactional
     public void deleteRoute(Long id) {
         if (!routeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Route not found with id: " + id);
+            throw new ResourceNotFoundException(ROUTE_NOT_FOUND + id);
         }
 
         routeRepository.deleteById(id);

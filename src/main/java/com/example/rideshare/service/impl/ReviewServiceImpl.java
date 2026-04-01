@@ -30,29 +30,38 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final ReviewMapper reviewMapper;
 
+    private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
+    private static final String RIDE_ID_NULL = "Ride ID cannot be null";
+    private static final String USER_ID_NULL = "User ID cannot be null";
+    private static final String NOT_PARTICIPANT = "User was not a participant in this ride";
+    private static final String REVIEW_NOT_FOUND = "Review not found with id: ";
+    private static final String CANNOT_REVIEW = "Cannot review ride that is not completed";
+    private static final String ALREADY_REVIEWED = "User already reviewed this ride";
+    private static final String REVIEWER_NOT_FOUND = "Reviewer not found with id: ";
+
     @Override
     @Transactional
     public ReviewResponseDto createReview(ReviewRequestDto request) {
         Ride ride = rideRepository.findById(request.getRideId())
-                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + request.getRideId()));
+                .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + request.getRideId()));
 
         if (RideStatus.COMPLETED != ride.getStatus()) {
-            throw new BusinessException("Cannot review ride that is not completed");
+            throw new BusinessException(CANNOT_REVIEW);
         }
 
         boolean wasPassenger = ride.getPassengers().stream()
                 .anyMatch(p -> p.getId().equals(request.getReviewerId()));
 
         if (!wasPassenger && !ride.getDriver().getId().equals(request.getReviewerId())) {
-            throw new BusinessException("User was not a participant in this ride");
+            throw new BusinessException(NOT_PARTICIPANT);
         }
 
         if (reviewRepository.existsByReviewerIdAndRideId(request.getReviewerId(), request.getRideId())) {
-            throw new BusinessException("User already reviewed this ride");
+            throw new BusinessException(ALREADY_REVIEWED);
         }
 
         User reviewer = userRepository.findById(request.getReviewerId()).orElseThrow(() ->
-                new ResourceNotFoundException("Reviewer not found with id: " + request.getReviewerId()));
+                new ResourceNotFoundException(REVIEWER_NOT_FOUND + request.getReviewerId()));
 
         Review review = reviewMapper.toEntity(request);
         review.setReviewer(reviewer);
@@ -70,7 +79,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public List<ReviewResponseDto> getReviewsByRide(Long rideId) {
         if (rideId == null) {
-            throw new BusinessException("Ride ID cannot be null");
+            throw new BusinessException(RIDE_ID_NULL);
         }
 
         List<Review> reviews = reviewRepository.findByRideId(rideId);
@@ -81,7 +90,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public List<ReviewResponseDto> getReviewsByUser(Long userId) {
         if (userId == null) {
-            throw new BusinessException("User ID cannot be null");
+            throw new BusinessException(USER_ID_NULL);
         }
 
         List<Review> reviews = reviewRepository.findByReviewerId(userId);
@@ -99,7 +108,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public void deleteReview(Long reviewId) {
         if (!reviewRepository.existsById(reviewId)) {
-            throw new ResourceNotFoundException("Review not found with id: " + reviewId);
+            throw new ResourceNotFoundException(REVIEW_NOT_FOUND + reviewId);
         }
 
         reviewRepository.deleteById(reviewId);
