@@ -38,7 +38,8 @@ public class RouteServiceImpl implements RouteService {
             throw new BusinessException(ROUTE_ID_NULL);
         }
 
-        Route route = routeRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(ROUTE_NOT_FOUND + id));
+        Route route = routeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ROUTE_NOT_FOUND + id));
 
         return routeMapper.toResponseDto(route);
     }
