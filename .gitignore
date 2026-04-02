@@ -32,6 +32,7 @@ utils/EnvConfig.java
 *.iws
 *.iml
 *.ipr
+*.log
 
 ### NetBeans ###
 /nbproject/private/
