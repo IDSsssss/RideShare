@@ -960,7 +960,7 @@ class RideServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should return cached data when modification count unchanged and cache contains key")
+        @DisplayName("Should return cached data when cache hit")
         void searchRides_CacheHit_WhenModificationCountUnchangedAndKeyExists() {
             // given - первый вызов заполняет кэш
             when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
@@ -1061,6 +1061,29 @@ class RideServiceImplTest {
             assertThat(secondPage).isNotNull();
             // Репозиторий НЕ вызывается — данные берутся из кэша
             verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("invalidateCache() should clear cache and increment modification count")
+        void invalidateCache_ShouldClearCache() {
+            // given
+            // Заполняем кэш
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(List.of(testRide));
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            rideService.searchRides(searchRequest);
+
+            Map<String, Object> statsBefore = rideService.getCacheStats();
+
+            // when
+            rideService.invalidateCache();
+
+            // then
+            Map<String, Object> statsAfter = rideService.getCacheStats();
+            assertThat((Integer) statsAfter.get("cacheSize")).isZero();
+            assertThat((Long) statsAfter.get("modificationCount"))
+                    .isGreaterThan((Long) statsBefore.get("modificationCount"));
         }
     }
 
