@@ -319,11 +319,11 @@ public class RideServiceImpl implements RideService {
 
                         return rideMapper.toResponseDto(savedRide);
                     })
-                    .collect(Collectors.toList());
+                    .toList();
 
         } catch (Exception e) {
             boolean hadTransaction = TransactionSynchronizationManager.isActualTransactionActive();
-            throw new RuntimeException("Bulk ride creation failed after " + results.size()
+            throw new BusinessException("Bulk ride creation failed after " + results.size()
                     + " rides. Transaction active: " + hadTransaction + ". Error: " + e.getMessage());
         }
 
