@@ -501,9 +501,7 @@ class RideServiceImplTest {
             // given
             when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(List.of());
-            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
-            // when
             Page<RideResponseDto> result = rideService.searchRides(searchRequest);
 
             // then
