@@ -729,6 +729,38 @@ class RideServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should handle duplicate routes and keep existing one")
+        void createRidesBulk_WhenDuplicateRoutesExist_ShouldKeepExistingRoute() {
+            // given
+            // Создаём два одинаковых маршрута (дубликаты)
+            Route route1 = new Route();
+            route1.setId(10L);
+            route1.setStartPoint("Москва");
+            route1.setEndPoint("СПб");
+
+            Route route2 = new Route();
+            route2.setId(20L);
+            route2.setStartPoint("Москва");
+            route2.setEndPoint("СПб");
+
+            List<Route> duplicateRoutes = Arrays.asList(route1, route2);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+            when(routeRepository.findAll()).thenReturn(duplicateRoutes);
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
+            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
+
+            // then
+            assertThat(result).hasSize(2);
+            // Проверяем, что использовался первый маршрут (existing), а не второй
+            verify(rideRepository, times(2)).save(any(Ride.class));
+        }
+
+        @Test
         @DisplayName("Should throw exception when driver not found")
         void createRidesBulk_DriverNotFound_ShouldThrowException() {
             // given
