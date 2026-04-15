@@ -650,22 +650,52 @@ class RideServiceImplTest {
     @DisplayName("createRidesBulk() tests")
     class CreateRidesBulkTests {
 
-//        @Test
-//        @DisplayName("Should create multiple rides successfully")
-//        void createRidesBulk_Success_ShouldReturnListOfRides() {
-//
-//            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
-//            when(routeRepository.findAll()).thenReturn(List.of(testRoute));
-//            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
-//            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
-//            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
-//            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
-//
-//            List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
-//
-//            assertThat(result).hasSize(2);
-//            verify(rideRepository, times(2)).save(any(Ride.class));
-//        }
+        @Test
+        @DisplayName("Should create multiple rides successfully when driver has existing list")
+        void createRidesBulk_Success_WhenDriverHasExistingList() {
+            // given
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+            when(routeRepository.findAll()).thenReturn(List.of(testRoute));
+            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
+            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
+
+            // then
+            assertThat(result).hasSize(2);
+            // Существующий список пополнился
+            assertThat(testDriver.getRidesAsDriver()).hasSize(2);
+            verify(userRepository, times(1)).save(testDriver);
+        }
+
+        @Test
+        @DisplayName("Should create new list when driver's ridesAsDriver is null")
+        void createRidesBulk_WhenDriverRidesAsDriverIsNull_ShouldCreateNewList() {
+            // given
+            User driverWithNullList = new User();
+            driverWithNullList.setId(1L);
+            driverWithNullList.setName("Test Driver");
+            driverWithNullList.setRidesAsDriver(null);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(driverWithNullList));
+            when(routeRepository.findAll()).thenReturn(List.of(testRoute));
+            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
+            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(driverWithNullList.getRidesAsDriver()).isNotNull();
+            assertThat(driverWithNullList.getRidesAsDriver()).hasSize(2);
+            verify(userRepository, times(1)).save(driverWithNullList);
+        }
 
         @Test
         @DisplayName("Should throw exception when driver not found")
@@ -677,6 +707,34 @@ class RideServiceImplTest {
             assertThatThrownBy(() -> rideService.createRidesBulk(testBulkRequest))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Driver not found");
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when price > 10000 (demo error)")
+        void createRidesBulk_PriceTooHigh_ShouldThrowException() {
+            // given
+            RideRequestDto highPriceRide = new RideRequestDto();
+            highPriceRide.setPrice(15000.0);
+            highPriceRide.setDepartureTime(LocalDateTime.now().plusDays(7));
+            highPriceRide.setAvailableSeats(4);
+
+            RouteRequestDto routeDto = new RouteRequestDto();
+            routeDto.setStartPoint("Москва");
+            routeDto.setEndPoint("СПб");
+            highPriceRide.setRoute(routeDto);
+
+            // Используем конструктор record
+            BulkRideRequestDto bulkRequest = new BulkRideRequestDto(
+                    1L,                    // driverId
+                    List.of(highPriceRide) // rides
+            );
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+
+            // when & then
+            assertThatThrownBy(() -> rideService.createRidesBulk(bulkRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("DEMO ERROR");
         }
 
         @Test
@@ -697,20 +755,6 @@ class RideServiceImplTest {
             // then
             assertThat(result).hasSize(2);
             verify(routeRepository, atLeastOnce()).save(any(Route.class));
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when price > 10000")
-        void createRidesBulk_PriceTooHigh_ShouldThrowException() {
-            // given
-            testRideDto.setPrice(15000.0);
-            testBulkRequest = new BulkRideRequestDto(1L, List.of(testRideDto));
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
-
-            // when & then
-            assertThatThrownBy(() -> rideService.createRidesBulk(testBulkRequest))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("DEMO ERROR");
         }
     }
 
