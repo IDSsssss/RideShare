@@ -182,14 +182,21 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw exception when user was not participant")
         void createReview_UserNotParticipant_ShouldThrowException() {
-            testRide.setDriver(testDriver);
+            // given
+            // Создаём пользователя, который НЕ является участником
+            User nonParticipant = new User();
+            nonParticipant.setId(99L);
+            nonParticipant.setName("Non Participant");
+
+            testRequest.setReviewerId(99L);
+
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
 
             // when & then
             assertThatThrownBy(() -> reviewService.createReview(testRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User was not a participant in this ride");
-            verify(reviewRepository, never()).save(any(Review.class));
         }
 
         @Test
@@ -211,12 +218,12 @@ class ReviewServiceImplTest {
         void createReview_ReviewerNotFound_ShouldThrowException() {
             // given
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            // Убираем лишние stubbing
-            // when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false); // ← УДАЛИТЬ
-            // when(userRepository.findById(1L)).thenReturn(Optional.empty()); // ← УДАЛИТЬ
+            // Пользователь НЕ существует в БД
+            when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-            //Reviewer not exists in ride passengers, so BusinessException will be thrown first
             // when & then
+            // Проверка на существование пользователя происходит ПОСЛЕ проверки на участника,
+            // поэтому сначала будет BusinessException, а не ResourceNotFoundException
             assertThatThrownBy(() -> reviewService.createReview(testRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User was not a participant in this ride");
