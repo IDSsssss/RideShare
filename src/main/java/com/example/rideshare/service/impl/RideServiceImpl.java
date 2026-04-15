@@ -104,6 +104,9 @@ public class RideServiceImpl implements RideService {
         Ride existingRide = rideRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
+        if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(TIME_IN_FUTURE);
+        }
         existingRide.setDepartureTime(request.getDepartureTime());
         existingRide.setAvailableSeats(request.getAvailableSeats());
         existingRide.setPrice(request.getPrice());
