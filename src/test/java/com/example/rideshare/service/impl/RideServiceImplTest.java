@@ -1232,6 +1232,32 @@ class RideServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should return cached data when cache hit occurs")
+        void searchRides_CacheHit_ShouldReturnCachedData() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов
+            Page<RideResponseDto> firstResult = rideService.searchRides(searchRequest);
+
+            // Проверяем, что кэш содержит ключ
+            Map<String, Object> stats = rideService.getCacheStats();
+            assertThat((Integer) stats.get("cacheSize")).isEqualTo(1);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // Второй вызов
+            Page<RideResponseDto> secondResult = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(secondResult.getContent()).hasSize(2);
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
         @DisplayName("invalidateCache() should clear cache and increment modification count")
         void invalidateCache_ShouldClearCache() {
             // given
