@@ -337,8 +337,8 @@ class RideServiceImplTest {
             when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
-            // Добавить мок для routeRepository.save при создании нового маршрута
-            when(routeRepository.save(any(Route.class))).thenReturn(testRoute);
+            // Убираем лишние stubbing
+            // when(routeRepository.save(any(Route.class))).thenReturn(testRoute); // ← УДАЛИТЬ
 
             // when
             List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
