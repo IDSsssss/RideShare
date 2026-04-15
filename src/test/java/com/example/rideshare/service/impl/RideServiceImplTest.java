@@ -187,6 +187,139 @@ class RideServiceImplTest {
     @DisplayName("updateRide() tests")
     class UpdateRideTests {
 
+        private Ride existingRide;
+        private RideRequestDto updateRequest;
+        private RouteRequestDto routeDto;
+
+        @BeforeEach
+        void setUp() {
+            existingRide = new Ride();
+            existingRide.setId(100L);
+            existingRide.setDepartureTime(LocalDateTime.now().plusDays(7));
+            existingRide.setAvailableSeats(4);
+            existingRide.setPrice(1500.0);
+
+            Route existingRoute = new Route();
+            existingRoute.setId(10L);
+            existingRoute.setStartPoint("Москва");
+            existingRoute.setEndPoint("СПб");
+            existingRide.setRoute(existingRoute);
+
+            routeDto = new RouteRequestDto();
+            routeDto.setStartPoint("Москва");
+            routeDto.setEndPoint("Казань");
+            routeDto.setDistanceKm(820.0);
+            routeDto.setEstimatedDurationMinutes(540);
+
+            updateRequest = new RideRequestDto();
+            updateRequest.setDepartureTime(LocalDateTime.now().plusDays(14));
+            updateRequest.setAvailableSeats(3);
+            updateRequest.setPrice(2000.0);
+            updateRequest.setRoute(routeDto);
+        }
+
+        @Test
+        @DisplayName("Should update route when both existing route and request route are not null")
+        void updateRide_BothRoutesExist_ShouldUpdateRoute() {
+            // given
+            Route updatedRoute = new Route();
+            updatedRoute.setId(10L);
+            updatedRoute.setStartPoint("Москва");
+            updatedRoute.setEndPoint("Казань");
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(updatedRoute);
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRide(100L, updateRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(routeMapper, times(1)).toEntity(any(RouteRequestDto.class));
+            verify(rideRepository, times(1)).save(existingRide);
+        }
+
+        @Test
+        @DisplayName("Should NOT update route when existing route is null")
+        void updateRide_ExistingRouteIsNull_ShouldNotUpdateRoute() {
+            // given
+            existingRide.setRoute(null);
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRide(100L, updateRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(routeMapper, never()).toEntity(any(RouteRequestDto.class));
+            verify(rideRepository, times(1)).save(existingRide);
+        }
+
+        @Test
+        @DisplayName("Should NOT update route when request route is null")
+        void updateRide_RequestRouteIsNull_ShouldNotUpdateRoute() {
+            // given
+            updateRequest.setRoute(null);
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRide(100L, updateRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(routeMapper, never()).toEntity(any(RouteRequestDto.class));
+            verify(rideRepository, times(1)).save(existingRide);
+        }
+
+        @Test
+        @DisplayName("Should NOT update route when both existing and request routes are null")
+        void updateRide_BothRoutesNull_ShouldNotUpdateRoute() {
+            // given
+            existingRide.setRoute(null);
+            updateRequest.setRoute(null);
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRide(100L, updateRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(routeMapper, never()).toEntity(any(RouteRequestDto.class));
+            verify(rideRepository, times(1)).save(existingRide);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ride not found")
+        void updateRide_RideNotFound_ShouldThrowException() {
+            // given
+            when(rideRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRide(999L, updateRequest))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Ride not found with id: 999");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when id is null")
+        void updateRide_NullId_ShouldThrowException() {
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRide(null, updateRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Ride ID cannot be null");
+        }
+
         @Test
         @DisplayName("Should update ride successfully")
         void updateRide_Success_ShouldReturnUpdatedRide() {
@@ -202,15 +335,6 @@ class RideServiceImplTest {
             // then
             assertThat(result).isNotNull();
             verify(rideRepository, times(1)).save(testRide);
-        }
-
-        @Test
-        @DisplayName("Should throw exception when id is null")
-        void updateRide_NullId_ShouldThrowException() {
-            // when & then
-            assertThatThrownBy(() -> rideService.updateRide(null, testRideDto))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Ride ID cannot be null");
         }
 
         @Test
