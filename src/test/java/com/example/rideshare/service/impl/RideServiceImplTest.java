@@ -1109,4 +1109,149 @@ class RideServiceImplTest {
             assertThat(countAfter).isGreaterThan(countBefore);
         }
     }
+
+    @Nested
+    @DisplayName("searchRides() pagination tests")
+    class SearchRidesPaginationTests {
+
+        private RideSearchRequest searchRequest;
+        private List<Ride> mockRides;
+        private List<RideResponseDto> mockResponses;
+
+        @BeforeEach
+        void setUp() {
+            searchRequest = new RideSearchRequest();
+            searchRequest.setStartPoint("Москва");
+            searchRequest.setEndPoint("СПб");
+            searchRequest.setUseNative(false);
+
+            // Создаём 5 тестовых поездок
+            mockRides = Arrays.asList(testRide, testRide, testRide, testRide, testRide);
+            mockResponses = Arrays.asList(
+                    testResponseDto, testResponseDto, testResponseDto, testResponseDto, testResponseDto);
+        }
+
+        @Test
+        @DisplayName("Should return paged content when start < cachedData.size()")
+        void searchRides_WhenStartLessThanSize_ShouldReturnSubList() {
+            // given
+            Pageable pageable = PageRequest.of(0, 3);
+            searchRequest.setPageable(pageable);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов заполняет кэш (сохраняются ВСЕ 5 элементов)
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when - второй вызов, page 0, size 3
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(3); // start=0 < 5 → берём подсписок
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should return empty list when start >= cachedData.size()")
+        void searchRides_WhenStartGreaterThanOrEqualSize_ShouldReturnEmptyList() {
+            // given
+            Pageable pageable = PageRequest.of(10, 3); // page 10, start = 10*3 = 30
+            searchRequest.setPageable(pageable);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов заполняет кэш (сохраняются ВСЕ 5 элементов)
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when - второй вызов, page 10 (start=30 >= 5)
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEmpty(); // start >= size → пустой список
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should return last page correctly when end exceeds size")
+        void searchRides_WhenEndExceedsSize_ShouldReturnRemainingElements() {
+            // given
+            Pageable pageable = PageRequest.of(1, 3); // page 1, start = 3, end = 6
+            searchRequest.setPageable(pageable);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов заполняет кэш (сохраняются ВСЕ 5 элементов)
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2); // end=6, но size=5 → берём элементы с 3 по 4
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should work correctly with page size 1")
+        void searchRides_WithPageSizeOne_ShouldReturnSingleElement() {
+            // given
+            Pageable pageable = PageRequest.of(0, 1);
+            searchRequest.setPageable(pageable);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов заполняет кэш
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should work correctly with empty cached data")
+        void searchRides_WithEmptyCachedData_ShouldReturnEmptyPage() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(List.of()); // пустой результат
+
+            Pageable pageable = PageRequest.of(0, 10);
+            searchRequest.setPageable(pageable);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+        }
+    }
 }
