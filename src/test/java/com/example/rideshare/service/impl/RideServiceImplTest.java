@@ -257,6 +257,30 @@ class RideServiceImplTest {
 
             // then
             verify(rideRepository, times(1)).delete(testRide);
+            verify(rideService, times(1)).invalidateCache(); // если invalidateCache публичный метод
+        }
+
+        @Test
+        @DisplayName("Should throw exception when id is null")
+        void deleteRide_NullId_ShouldThrowException() {
+            // when & then
+            assertThatThrownBy(() -> rideService.deleteRide(null))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Ride ID cannot be null");
+            verify(rideRepository, never()).delete(any(Ride.class));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ride not found")
+        void deleteRide_NotFound_ShouldThrowException() {
+            // given
+            when(rideRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> rideService.deleteRide(999L))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Ride not found with id: 999");
+            verify(rideRepository, never()).delete(any(Ride.class));
         }
 
         @Test
@@ -271,6 +295,21 @@ class RideServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Cannot delete ride with existing bookings");
             verify(rideRepository, never()).delete(any(Ride.class));
+        }
+
+        @Test
+        @DisplayName("Should handle null bookedSeats correctly")
+        void deleteRide_WhenBookedSeatsNull_ShouldDeleteSuccessfully() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(null); // ← null
+            doNothing().when(rideRepository).delete(testRide);
+
+            // when
+            rideService.deleteRide(100L);
+
+            // then
+            verify(rideRepository, times(1)).delete(testRide);
         }
     }
 
