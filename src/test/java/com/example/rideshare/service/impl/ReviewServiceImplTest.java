@@ -259,22 +259,17 @@ class ReviewServiceImplTest {
         @DisplayName("Should throw BusinessException when user is neither passenger nor driver")
         void createReview_NeitherPassengerNorDriver_ShouldThrowBusinessException() {
             // given
-            // Создаём пользователя, который не участвует в поездке
             User nonParticipant = new User();
             nonParticipant.setId(99L);
-            nonParticipant.setName("Non Participant");
 
-            // Создаём поездку: водитель id=10, пассажир id=1
-            // Пользователь 99 не участвует
             ReviewRequestDto request = new ReviewRequestDto();
             request.setRideId(100L);
             request.setReviewerId(99L);
             request.setRating(5);
-            request.setComment("Great ride!");
 
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
-            // Не мокаем existsByReviewerIdAndRideId, потому что проверка происходит раньше
+            lenient().when(reviewRepository.existsByReviewerIdAndRideId(anyLong(), anyLong())).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> reviewService.createReview(request))
