@@ -179,31 +179,6 @@ class ReviewServiceImplTest {
             verify(reviewRepository, never()).save(any(Review.class));
         }
 
-//        @Test
-//        @DisplayName("Should throw exception when user was not participant")
-//        void createReview_UserNotParticipant_ShouldThrowException() {
-//            // given
-//            User nonParticipant = new User();
-//            nonParticipant.setId(99L);
-//            nonParticipant.setName("Non Participant");
-//
-//            ReviewRequestDto request = new ReviewRequestDto();
-//            request.setRideId(100L);
-//            request.setReviewerId(99L);
-//            request.setRating(5);
-//            request.setComment("Great ride!");
-//
-//            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-//            when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
-//            // Удали эту строку, если она есть:
-//            // when(reviewRepository.existsByReviewerIdAndRideId(anyLong(), anyLong())).thenReturn(false);
-//
-//            // when & then
-//            assertThatThrownBy(() -> reviewService.createReview(request))
-//                    .isInstanceOf(BusinessException.class)
-//                    .hasMessageContaining("User was not a participant in this ride");
-//        }
-
         @Test
         @DisplayName("Should create review when user is driver")
         void createReview_UserIsDriver_ShouldSucceed() {
@@ -246,33 +221,6 @@ class ReviewServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw BusinessException when user is neither passenger nor driver")
-        void createReview_UserNotPassengerAndNotDriver_ShouldThrowBusinessException() {
-            // given
-            // Создаём пользователя, который не является ни пассажиром, ни водителем
-            User nonParticipant = new User();
-            nonParticipant.setId(99L);
-            nonParticipant.setName("Non Participant");
-
-            // Создаём поездку с водителем (id=10) и пассажиром (id=1)
-            // Пользователь 99 не участвует
-            ReviewRequestDto request = new ReviewRequestDto();
-            request.setRideId(100L);
-            request.setReviewerId(99L);
-            request.setRating(5);
-            request.setComment("Great ride!");
-
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
-            // НЕ мокаем reviewRepository.existsByReviewerIdAndRideId, потому что проверка участника происходит раньше
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(request))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("User was not a participant in this ride");
-        }
-
-        @Test
         @DisplayName("Should throw exception when user already reviewed this ride")
         void createReview_AlreadyReviewed_ShouldThrowException() {
             // given
@@ -285,22 +233,6 @@ class ReviewServiceImplTest {
                     .hasMessageContaining("User already reviewed this ride");
             verify(reviewRepository, never()).save(any(Review.class));
         }
-
-//        @Test
-//        @DisplayName("Should throw exception when reviewer not found")
-//        void createReview_ReviewerNotFound_ShouldThrowException() {
-//            // given
-//            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-//            // Пользователь НЕ существует в БД
-//            when(userRepository.findById(1L)).thenReturn(Optional.empty());
-//
-//            // when & then
-//            // Проверка на существование пользователя происходит ПОСЛЕ проверки на участника,
-//            // поэтому сначала будет BusinessException, а не ResourceNotFoundException
-//            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-//                    .isInstanceOf(BusinessException.class)
-//                    .hasMessageContaining("User was not a participant in this ride");
-//        }
 
         @Test
         @DisplayName("Should create review when user is passenger")
@@ -337,9 +269,7 @@ class ReviewServiceImplTest {
 
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
-            // БЕЗ лишних stubbing
 
-            // when & then
             assertThatThrownBy(() -> reviewService.createReview(request))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User was not a participant in this ride");
@@ -378,7 +308,6 @@ class ReviewServiceImplTest {
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(true);
 
-            // when & then
             assertThatThrownBy(() -> reviewService.createReview(testRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User already reviewed this ride");
