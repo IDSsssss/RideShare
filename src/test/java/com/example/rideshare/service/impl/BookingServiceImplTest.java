@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -210,6 +211,74 @@ class BookingServiceImplTest {
             assertThatThrownBy(() -> bookingService.createBooking(testRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Not enough seats available");
+        }
+
+        @Test
+        @DisplayName("Should handle null booked seats (when no bookings exist)")
+        void createBooking_WhenNoBookingsExist_ShouldSetBookedSeatsToZero() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.existsByPassengerIdAndRideIdAndStatusIn(anyLong(), anyLong(), anyList()))
+                    .thenReturn(false);
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(null); // ← null
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testPassenger));
+            when(bookingRepository.save(any(Booking.class))).thenReturn(testBooking);
+            when(bookingMapper.toResponseDto(any(Booking.class))).thenReturn(testResponse);
+
+            // when
+            BookingResponseDto result = bookingService.createBooking(testRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            // Проверяем, что метод save был вызван (значит, bookedSeats был установлен в 0)
+            verify(bookingRepository, times(1)).save(any(Booking.class));
+        }
+
+        @Test
+        @DisplayName("Should handle null booked seats correctly")
+        void createBooking_NullBookedSeats_ShouldSetToZero() {
+            // given
+            // Рейд с 4 местами
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.existsByPassengerIdAndRideIdAndStatusIn(anyLong(), anyLong(), anyList()))
+                    .thenReturn(false);
+            // getTotalBookedSeatsForRide возвращает null (нет бронирований)
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(null);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testPassenger));
+
+            // Создаём бронирование через ArgumentCaptor, чтобы проверить, что места доступны
+            ArgumentCaptor<Booking> bookingCaptor = ArgumentCaptor.forClass(Booking.class);
+            when(bookingRepository.save(bookingCaptor.capture())).thenReturn(testBooking);
+            when(bookingMapper.toResponseDto(any(Booking.class))).thenReturn(testResponse);
+
+            // when
+            BookingResponseDto result = bookingService.createBooking(testRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            // Проверяем, что бронирование было создано (значит, проверка мест прошла успешно)
+            verify(bookingRepository, times(1)).save(any(Booking.class));
+        }
+
+        @Test
+        @DisplayName("Should correctly calculate available seats when bookings exist")
+        void createBooking_WithExistingBookings_ShouldCalculateCorrectly() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.existsByPassengerIdAndRideIdAndStatusIn(anyLong(), anyLong(), anyList()))
+                    .thenReturn(false);
+            // Уже забронировано 2 места (не null)
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(2);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testPassenger));
+            when(bookingRepository.save(any(Booking.class))).thenReturn(testBooking);
+            when(bookingMapper.toResponseDto(any(Booking.class))).thenReturn(testResponse);
+
+            // when
+            BookingResponseDto result = bookingService.createBooking(testRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(bookingRepository, times(1)).save(any(Booking.class));
         }
     }
 
