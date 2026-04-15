@@ -166,6 +166,19 @@ class ReviewServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should throw BusinessException when ride is not completed")
+        void createReview_RideNotCompleted_ShouldThrowBusinessException() {
+            // given
+            testRide.setStatus(RideStatus.SCHEDULED);
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+
+            // when & then
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Cannot review ride that is not completed");
+        }
+
+        @Test
         @DisplayName("Should throw exception when ride is not completed")
         void createReview_RideNotCompleted_ShouldThrowException() {
             // given
@@ -177,6 +190,19 @@ class ReviewServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Cannot review ride that is not completed");
             verify(reviewRepository, never()).save(any(Review.class));
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when user already reviewed")
+        void createReview_AlreadyReviewed_ShouldThrowBusinessException() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("User already reviewed this ride");
         }
 
 //        @Test
@@ -304,6 +330,20 @@ class ReviewServiceImplTest {
             // then
             assertThat(result).hasSize(2);
             verify(reviewRepository, times(1)).findByReviewerId(1L);
+        }
+
+        @Test
+        @DisplayName("Should return empty list when no reviews for user")
+        void getReviewsByUser_NoReviews_ShouldReturnEmptyList() {
+            // given
+            when(reviewRepository.findByReviewerId(1L)).thenReturn(List.of());
+            when(reviewMapper.toResponseDtoList(List.of())).thenReturn(List.of());
+
+            // when
+            List<ReviewResponseDto> result = reviewService.getReviewsByUser(1L);
+
+            // then
+            assertThat(result).isEmpty();
         }
 
         @Test

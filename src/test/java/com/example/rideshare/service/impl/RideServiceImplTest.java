@@ -223,6 +223,18 @@ class RideServiceImplTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Ride not found with id: 999");
         }
+
+        @Test
+        @DisplayName("Should throw BusinessException when departure time is in past")
+        void updateRide_DepartureTimeInPast_ShouldThrowException() {
+            // given
+            testRideDto.setDepartureTime(LocalDateTime.now().minusDays(1));
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRide(100L, testRideDto))
+                    .isInstanceOf(BusinessException.class);
+        }
     }
 
     // ==================== DELETE RIDE TESTS ====================
@@ -354,6 +366,40 @@ class RideServiceImplTest {
             assertThatThrownBy(() -> rideService.createRidesBulk(testBulkRequest))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Driver not found");
+        }
+
+        @Test
+        @DisplayName("Should create new route when not exists")
+        void createRidesBulk_NewRoute_ShouldCreateRoute() {
+            // given
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+            when(routeRepository.findAll()).thenReturn(List.of()); // нет существующих маршрутов
+            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
+            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+            when(routeRepository.save(any(Route.class))).thenReturn(testRoute);
+
+            // when
+            List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
+
+            // then
+            assertThat(result).hasSize(2);
+            verify(routeRepository, atLeastOnce()).save(any(Route.class));
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when price > 10000")
+        void createRidesBulk_PriceTooHigh_ShouldThrowException() {
+            // given
+            testRideDto.setPrice(15000.0);
+            testBulkRequest = new BulkRideRequestDto(1L, List.of(testRideDto));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+
+            // when & then
+            assertThatThrownBy(() -> rideService.createRidesBulk(testBulkRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("DEMO ERROR");
         }
     }
 

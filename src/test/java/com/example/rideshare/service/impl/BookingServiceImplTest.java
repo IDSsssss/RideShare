@@ -195,6 +195,22 @@ class BookingServiceImplTest {
                     .hasMessageContaining("Passenger not found with id: 1");
             verify(bookingRepository, never()).save(any(Booking.class));
         }
+
+        @Test
+        @DisplayName("Should throw BusinessException when not enough seats")
+        void createBooking_NotEnoughSeats_ShouldThrowBusinessException() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.existsByPassengerIdAndRideIdAndStatusIn(anyLong(), anyLong(), anyList()))
+                    .thenReturn(false);
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(4); // уже 4 места занято
+            testRequest.setSeats(2); // хотим ещё 2, но всего мест 4
+
+            // when & then
+            assertThatThrownBy(() -> bookingService.createBooking(testRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Not enough seats available");
+        }
     }
 
     // ==================== CANCEL BOOKING TESTS ====================
@@ -325,6 +341,21 @@ class BookingServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should return empty list when no bookings for user")
+        void getBookingsByUser_NoBookings_ShouldReturnEmptyList() {
+            // given
+            when(userRepository.existsById(1L)).thenReturn(true);
+            when(bookingRepository.findByPassengerId(1L)).thenReturn(List.of());
+            when(bookingMapper.toResponseDtoList(List.of())).thenReturn(List.of());
+
+            // when
+            List<BookingResponseDto> result = bookingService.getBookingsByUser(1L);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
         @DisplayName("Should throw exception when user not found")
         void getBookingsByUser_UserNotFound_ShouldThrowException() {
             // given
@@ -360,6 +391,21 @@ class BookingServiceImplTest {
             // then
             assertThat(result).hasSize(2);
             verify(bookingRepository, times(1)).findByRideId(100L);
+        }
+
+        @Test
+        @DisplayName("Should return empty list when no bookings for ride")
+        void getBookingsByRide_NoBookings_ShouldReturnEmptyList() {
+            // given
+            when(rideRepository.existsById(100L)).thenReturn(true);
+            when(bookingRepository.findByRideId(100L)).thenReturn(List.of());
+            when(bookingMapper.toResponseDtoList(List.of())).thenReturn(List.of());
+
+            // when
+            List<BookingResponseDto> result = bookingService.getBookingsByRide(100L);
+
+            // then
+            assertThat(result).isEmpty();
         }
 
         @Test
