@@ -343,23 +343,72 @@ class UserServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw ConflictException when updating to existing email")
-        void updateUser_EmailAlreadyExists_ShouldThrowConflictException() {
+        @DisplayName("Should NOT check email existence when email is the same")
+        void updateUser_SameEmail_ShouldNotCheckExistence() {
             // given
             UserRequestDto updateDto = new UserRequestDto();
-            updateDto.setEmail("existing@example.com");
+            updateDto.setEmail("user@example.com"); // тот же email
+
+            User existingUser = new User();
+            existingUser.setId(1L);
+            existingUser.setEmail("user@example.com");
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+            when(userRepository.save(any(User.class))).thenReturn(existingUser);
+            when(userMapper.toResponseDto(any(User.class))).thenReturn(new UserResponseDto());
+
+            // when
+            UserResponseDto result = userService.updateUser(1L, updateDto);
+
+            // then
+            assertThat(result).isNotNull();
+            // existsByEmail НЕ должен вызываться, потому что email не изменился
+            verify(userRepository, never()).existsByEmail(anyString());
+        }
+
+        @Test
+        @DisplayName("Should NOT throw exception when new email is available")
+        void updateUser_NewEmailAvailable_ShouldUpdateSuccessfully() {
+            // given
+            UserRequestDto updateDto = new UserRequestDto();
+            updateDto.setEmail("new@example.com");
 
             User existingUser = new User();
             existingUser.setId(1L);
             existingUser.setEmail("old@example.com");
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
-            when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
+            when(userRepository.existsByEmail("new@example.com")).thenReturn(false); // email свободен
+            when(userRepository.save(any(User.class))).thenReturn(existingUser);
+            when(userMapper.toResponseDto(any(User.class))).thenReturn(new UserResponseDto());
+
+            // when
+            UserResponseDto result = userService.updateUser(1L, updateDto);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(userRepository, times(1)).existsByEmail("new@example.com");
+            verify(userRepository, times(1)).save(existingUser);
+        }
+
+        @Test
+        @DisplayName("Should throw ConflictException when new email already exists")
+        void updateUser_EmailAlreadyExists_ShouldThrowConflictException() {
+            // given
+            UserRequestDto updateDto = new UserRequestDto();
+            updateDto.setEmail("taken@example.com");
+
+            User existingUser = new User();
+            existingUser.setId(1L);
+            existingUser.setEmail("old@example.com");
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+            when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
 
             // when & then
             assertThatThrownBy(() -> userService.updateUser(1L, updateDto))
                     .isInstanceOf(ConflictException.class)
-                    .hasMessageContaining("Email existing@example.com is already taken");
+                    .hasMessageContaining("Email taken@example.com is already taken");
 
             verify(userRepository, never()).save(any(User.class));
         }
