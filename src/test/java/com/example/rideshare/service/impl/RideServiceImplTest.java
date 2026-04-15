@@ -311,6 +311,24 @@ class RideServiceImplTest {
             // then
             verify(rideRepository, times(1)).delete(testRide);
         }
+
+        @Test
+        @DisplayName("Should invalidate cache after deletion")
+        void deleteRide_ShouldInvalidateCache() throws Exception {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(0);
+            doNothing().when(rideRepository).delete(testRide);
+
+            // Создаём spy для проверки вызова метода
+            RideServiceImpl spyService = spy(rideService);
+
+            // when
+            spyService.deleteRide(100L);
+
+            // then
+            verify(spyService, times(1)).invalidateCache();
+        }
     }
 
     // ==================== UPDATE RIDE STATUS TESTS ====================
