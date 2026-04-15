@@ -656,8 +656,6 @@ class RideServiceImplTest {
             // given
             when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
             when(routeRepository.findAll()).thenReturn(List.of(testRoute));
-            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
-            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -682,8 +680,6 @@ class RideServiceImplTest {
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(driverWithNullList));
             when(routeRepository.findAll()).thenReturn(List.of(testRoute));
-            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
-            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
