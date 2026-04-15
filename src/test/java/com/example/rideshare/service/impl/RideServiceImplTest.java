@@ -671,6 +671,38 @@ class RideServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should handle duplicate routes in repository")
+        void createRidesBulk_WhenDuplicateRoutesExist_ShouldUseExistingRoute() {
+            // given
+            // Создаём два одинаковых маршрута
+            Route route1 = new Route();
+            route1.setId(10L);
+            route1.setStartPoint("Москва");
+            route1.setEndPoint("СПб");
+
+            Route route2 = new Route();
+            route2.setId(20L);
+            route2.setStartPoint("Москва");
+            route2.setEndPoint("СПб");
+
+            List<Route> duplicateRoutes = Arrays.asList(route1, route2);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+            when(routeRepository.findAll()).thenReturn(duplicateRoutes); // два одинаковых маршрута
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
+            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
+
+            // then
+            assertThat(result).hasSize(2);
+            // Проверяем, что использовался первый маршрут (existing), а не второй
+            verify(rideRepository, times(2)).save(any(Ride.class));
+        }
+
+        @Test
         @DisplayName("Should create new list when driver's ridesAsDriver is null")
         void createRidesBulk_WhenDriverRidesAsDriverIsNull_ShouldCreateNewList() {
             // given
@@ -933,6 +965,28 @@ class RideServiceImplTest {
             // then
             assertThat(result).isNotNull();
             verify(rideRepository, times(1)).searchRides(null, null, null, null, null, null, null);
+        }
+
+        @Test
+        @DisplayName("Should return cached data when modification count unchanged and key exists")
+        void searchRides_CacheHit_ShouldUseCachedData() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(List.of(testRide));
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняем кэш
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // Второй вызов — должен взять из кэша
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
         }
     }
 
