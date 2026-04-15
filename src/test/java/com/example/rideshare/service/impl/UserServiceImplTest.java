@@ -283,6 +283,45 @@ class UserServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should update only name when other fields null")
+        void updateUser_OnlyName_ShouldUpdateOnlyName() {
+            // given
+            UserRequestDto updateDto = new UserRequestDto();
+            updateDto.setName("New Name Only");
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.save(any(User.class))).thenReturn(testUser);
+            when(userMapper.toResponseDto(any(User.class))).thenReturn(testUserResponseDto);
+
+            // when
+            UserResponseDto result = userService.updateUser(1L, updateDto);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(userRepository, times(1)).save(testUser);
+        }
+
+        @Test
+        @DisplayName("Should update only email when other fields null")
+        void updateUser_OnlyEmail_ShouldUpdateOnlyEmail() {
+            // given
+            UserRequestDto updateDto = new UserRequestDto();
+            updateDto.setEmail("newemail@example.com");
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.existsByEmail("newemail@example.com")).thenReturn(false);
+            when(userRepository.save(any(User.class))).thenReturn(testUser);
+            when(userMapper.toResponseDto(any(User.class))).thenReturn(testUserResponseDto);
+
+            // when
+            UserResponseDto result = userService.updateUser(1L, updateDto);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(testUser.getEmail()).isEqualTo("newemail@example.com");
+        }
+
+        @Test
         @DisplayName("Should throw exception when id is null")
         void updateUser_NullId_ShouldThrowException() {
             // when & then

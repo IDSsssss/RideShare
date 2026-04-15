@@ -257,6 +257,27 @@ class RouteServiceImplTest {
                     .hasMessageContaining("Route not found with id: 999");
             verify(routeRepository, never()).save(any(Route.class));
         }
+
+        @Test
+        @DisplayName("Should update route with null waypoints")
+        void updateRoute_WithNullWaypoints_ShouldUpdateSuccessfully() {
+            // given
+            RouteRequestDto updateDto = new RouteRequestDto();
+            updateDto.setStartPoint("Moscow");
+            updateDto.setEndPoint("Kazan");
+            updateDto.setWaypoints(null);
+
+            when(routeRepository.findById(10L)).thenReturn(Optional.of(testRoute));
+            when(routeRepository.save(any(Route.class))).thenReturn(testRoute);
+            when(routeMapper.toResponseDto(any(Route.class))).thenReturn(testResponseDto);
+
+            // when
+            RouteResponseDto result = routeService.updateRoute(10L, updateDto);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(testRoute.getWaypoints()).isNull();
+        }
     }
 
     // ==================== DELETE ROUTE TESTS ====================
@@ -335,6 +356,21 @@ class RouteServiceImplTest {
             // then
             assertThat(result).hasSize(1);
             verify(routeRepository, times(1)).findByStartPointContainingIgnoreCase("Москва");
+        }
+
+        @Test
+        @DisplayName("Should return empty list when startPoint not found")
+        void findRoutesByStartAndEnd_StartPointNotFound_ShouldReturnEmpty() {
+            // given
+            when(routeRepository.findByStartPointContainingIgnoreCase("NonExistent"))
+                    .thenReturn(List.of());
+            when(routeMapper.toResponseDtoList(List.of())).thenReturn(List.of());
+
+            // when
+            List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd("NonExistent", null);
+
+            // then
+            assertThat(result).isEmpty();
         }
 
         @Test
