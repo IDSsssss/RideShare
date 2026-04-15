@@ -282,7 +282,7 @@ public class RideServiceImpl implements RideService {
                         RideRequestDto rideDto = request.rides().get(i);
 
                         if (rideDto.getPrice() > 10000) {
-                            throw new RuntimeException("DEMO ERROR: Failed to process 3rd ride");
+                            throw new BusinessException("DEMO ERROR: Failed to process 3rd ride");
                         }
 
                         Optional.of(rideDto)
