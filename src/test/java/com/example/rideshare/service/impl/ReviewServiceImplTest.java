@@ -55,11 +55,9 @@ class ReviewServiceImplTest {
     private Review testReview;
     private ReviewRequestDto testRequest;
     private ReviewResponseDto testResponse;
-    private HashSet<User> passengers;
 
     @BeforeEach
     void setUp() {
-        // Инициализация тестовых данных
         testDriver = new User();
         testDriver.setId(10L);
         testDriver.setName("Test Driver");
@@ -69,7 +67,6 @@ class ReviewServiceImplTest {
         testReviewer.setId(1L);
         testReviewer.setName("Test Reviewer");
 
-        // Создаём booking через который будет получен пассажир
         Booking testBooking = new Booking();
         testBooking.setPassenger(testReviewer);
 
@@ -80,7 +77,7 @@ class ReviewServiceImplTest {
         testRide.setId(100L);
         testRide.setDriver(testDriver);
         testRide.setStatus(RideStatus.COMPLETED);
-        testRide.setBookings(bookings);  // ← пассажиры получаются через bookings
+        testRide.setBookings(bookings);
 
         testReview = new Review();
         testReview.setId(1000L);
@@ -101,6 +98,7 @@ class ReviewServiceImplTest {
         testResponse.setRating(5);
         testResponse.setComment("Great ride!");
     }
+
     // ==================== CREATE REVIEW TESTS ====================
 
     @Nested
@@ -110,7 +108,6 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should create review successfully when user is passenger")
         void createReview_SuccessAsPassenger_ShouldReturnReviewResponse() {
-            // given
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
             when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
@@ -119,12 +116,9 @@ class ReviewServiceImplTest {
             when(reviewMapper.toResponseDto(any(Review.class))).thenReturn(testResponse);
             when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
             when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
-            when(userRepository.save(any(User.class))).thenReturn(testDriver);
 
-            // when
             ReviewResponseDto result = reviewService.createReview(testRequest);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getId()).isEqualTo(1000L);
             verify(reviewRepository, times(1)).save(any(Review.class));
@@ -133,59 +127,9 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should create review successfully when user is driver")
         void createReview_SuccessAsDriver_ShouldReturnReviewResponse() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(reviewRepository.existsByReviewerIdAndRideId(10L, 100L)).thenReturn(false);
-            when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
-            when(reviewMapper.toEntity(any(ReviewRequestDto.class))).thenReturn(testReview);
-            when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
-            when(reviewMapper.toResponseDto(any(Review.class))).thenReturn(testResponse);
-            when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
-            when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
-
-            testRequest.setReviewerId(10L);
-
-            // when
-            ReviewResponseDto result = reviewService.createReview(testRequest);
-
-            // then
-            assertThat(result).isNotNull();
-            verify(reviewRepository, times(1)).save(any(Review.class));
-        }
-
-        @Test
-        @DisplayName("Should throw exception when ride not found")
-        void createReview_RideNotFound_ShouldThrowException() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Ride not found with id: 100");
-            verify(reviewRepository, never()).save(any(Review.class));
-        }
-
-        @Test
-        @DisplayName("Should throw exception when ride is not completed")
-        void createReview_RideNotCompleted_ShouldThrowException() {
-            // given
-            testRide.setStatus(RideStatus.SCHEDULED);
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Cannot review ride that is not completed");
-            verify(reviewRepository, never()).save(any(Review.class));
-        }
-
-        @Test
-        @DisplayName("Should create review when user is driver")
-        void createReview_UserIsDriver_ShouldSucceed() {
-            // given
             ReviewRequestDto request = new ReviewRequestDto();
             request.setRideId(100L);
-            request.setReviewerId(10L); // водитель
+            request.setReviewerId(10L);
             request.setRating(5);
             request.setComment("Great ride!");
 
@@ -198,23 +142,41 @@ class ReviewServiceImplTest {
             when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
             when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
 
-            // when
             ReviewResponseDto result = reviewService.createReview(request);
 
-            // then
             assertThat(result).isNotNull();
             verify(reviewRepository, times(1)).save(any(Review.class));
         }
 
         @Test
-        @DisplayName("Should throw ResourceNotFoundException when reviewer not found in database")
-        void createReview_ReviewerNotFoundInDatabase_ShouldThrowResourceNotFoundException() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            // Пользователь является участником (пассажиром)
-            when(userRepository.findById(1L)).thenReturn(Optional.empty()); // ← пользователь не найден в БД
+        @DisplayName("Should throw exception when ride not found")
+        void createReview_RideNotFound_ShouldThrowException() {
+            when(rideRepository.findById(100L)).thenReturn(Optional.empty());
 
-            // when & then
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Ride not found with id: 100");
+            verify(reviewRepository, never()).save(any(Review.class));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ride is not completed")
+        void createReview_RideNotCompleted_ShouldThrowException() {
+            testRide.setStatus(RideStatus.SCHEDULED);
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Cannot review ride that is not completed");
+            verify(reviewRepository, never()).save(any(Review.class));
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when reviewer not found in database")
+        void createReview_ReviewerNotFound_ShouldThrowResourceNotFoundException() {
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
             assertThatThrownBy(() -> reviewService.createReview(testRequest))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Reviewer not found with id: 1");
@@ -223,11 +185,9 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw exception when user already reviewed this ride")
         void createReview_AlreadyReviewed_ShouldThrowException() {
-            // given
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(true);
 
-            // when & then
             assertThatThrownBy(() -> reviewService.createReview(testRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User already reviewed this ride");
@@ -235,30 +195,8 @@ class ReviewServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should create review when user is passenger")
-        void createReview_UserIsPassenger_ShouldSucceed() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
-            when(reviewMapper.toEntity(any(ReviewRequestDto.class))).thenReturn(testReview);
-            when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
-            when(reviewMapper.toResponseDto(any(Review.class))).thenReturn(testResponse);
-            when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
-            when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
-
-            // when
-            ReviewResponseDto result = reviewService.createReview(testRequest);
-
-            // then
-            assertThat(result).isNotNull();
-            verify(reviewRepository, times(1)).save(any(Review.class));
-        }
-
-        @Test
         @DisplayName("Should throw BusinessException when user is neither passenger nor driver")
         void createReview_NeitherPassengerNorDriver_ShouldThrowBusinessException() {
-            // given
             User nonParticipant = new User();
             nonParticipant.setId(99L);
 
@@ -269,50 +207,10 @@ class ReviewServiceImplTest {
 
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
-            lenient().when(reviewRepository.existsByReviewerIdAndRideId(anyLong(), anyLong())).thenReturn(false);
 
-            // when & then
             assertThatThrownBy(() -> reviewService.createReview(request))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User was not a participant in this ride");
-        }
-
-        @Test
-        @DisplayName("Should throw ResourceNotFoundException when reviewer not found in DB")
-        void createReview_ReviewerNotFound_ShouldThrowResourceNotFoundException() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Reviewer not found with id: 1");
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when ride is not completed")
-        void createReview_RideNotCompleted_ShouldThrowBusinessException() {
-            // given
-            testRide.setStatus(RideStatus.SCHEDULED);
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Cannot review ride that is not completed");
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when user already reviewed")
-        void createReview_AlreadyReviewed_ShouldThrowBusinessException() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(true);
-
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("User already reviewed this ride");
         }
     }
 
@@ -325,16 +223,13 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should return list of reviews for ride")
         void getReviewsByRide_Success_ShouldReturnReviewsList() {
-            // given
             List<Review> reviews = Arrays.asList(testReview, testReview);
             List<ReviewResponseDto> expectedResponse = Arrays.asList(testResponse, testResponse);
             when(reviewRepository.findByRideId(100L)).thenReturn(reviews);
             when(reviewMapper.toResponseDtoList(reviews)).thenReturn(expectedResponse);
 
-            // when
             List<ReviewResponseDto> result = reviewService.getReviewsByRide(100L);
 
-            // then
             assertThat(result).hasSize(2);
             verify(reviewRepository, times(1)).findByRideId(100L);
         }
@@ -342,7 +237,6 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw exception when rideId is null")
         void getReviewsByRide_NullRideId_ShouldThrowException() {
-            // when & then
             assertThatThrownBy(() -> reviewService.getReviewsByRide(null))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Ride ID cannot be null");
@@ -352,14 +246,11 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should return empty list when no reviews for ride")
         void getReviewsByRide_NoReviews_ShouldReturnEmptyList() {
-            // given
             when(reviewRepository.findByRideId(100L)).thenReturn(List.of());
             when(reviewMapper.toResponseDtoList(List.of())).thenReturn(List.of());
 
-            // when
             List<ReviewResponseDto> result = reviewService.getReviewsByRide(100L);
 
-            // then
             assertThat(result).isEmpty();
         }
     }
@@ -373,16 +264,13 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should return list of reviews for user")
         void getReviewsByUser_Success_ShouldReturnReviewsList() {
-            // given
             List<Review> reviews = Arrays.asList(testReview, testReview);
             List<ReviewResponseDto> expectedResponse = Arrays.asList(testResponse, testResponse);
             when(reviewRepository.findByReviewerId(1L)).thenReturn(reviews);
             when(reviewMapper.toResponseDtoList(reviews)).thenReturn(expectedResponse);
 
-            // when
             List<ReviewResponseDto> result = reviewService.getReviewsByUser(1L);
 
-            // then
             assertThat(result).hasSize(2);
             verify(reviewRepository, times(1)).findByReviewerId(1L);
         }
@@ -390,21 +278,17 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should return empty list when no reviews for user")
         void getReviewsByUser_NoReviews_ShouldReturnEmptyList() {
-            // given
             when(reviewRepository.findByReviewerId(1L)).thenReturn(List.of());
             when(reviewMapper.toResponseDtoList(List.of())).thenReturn(List.of());
 
-            // when
             List<ReviewResponseDto> result = reviewService.getReviewsByUser(1L);
 
-            // then
             assertThat(result).isEmpty();
         }
 
         @Test
         @DisplayName("Should throw exception when userId is null")
         void getReviewsByUser_NullUserId_ShouldThrowException() {
-            // when & then
             assertThatThrownBy(() -> reviewService.getReviewsByUser(null))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User ID cannot be null");
@@ -421,26 +305,20 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should return average rating when reviews exist")
         void getAverageRatingForDriver_WithReviews_ShouldReturnAverage() {
-            // given
             when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.7);
 
-            // when
             Double result = reviewService.getAverageRatingForDriver(10L);
 
-            // then
             assertThat(result).isEqualTo(4.7);
         }
 
         @Test
         @DisplayName("Should return 0.0 when no reviews exist")
         void getAverageRatingForDriver_NoReviews_ShouldReturnZero() {
-            // given
             when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(null);
 
-            // when
             Double result = reviewService.getAverageRatingForDriver(10L);
 
-            // then
             assertThat(result).isEqualTo(0.0);
         }
     }
@@ -454,24 +332,19 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should delete review successfully")
         void deleteReview_Success_ShouldDeleteReview() {
-            // given
             when(reviewRepository.existsById(1000L)).thenReturn(true);
             doNothing().when(reviewRepository).deleteById(1000L);
 
-            // when
             reviewService.deleteReview(1000L);
 
-            // then
             verify(reviewRepository, times(1)).deleteById(1000L);
         }
 
         @Test
         @DisplayName("Should throw exception when review not found")
         void deleteReview_ReviewNotFound_ShouldThrowException() {
-            // given
             when(reviewRepository.existsById(1000L)).thenReturn(false);
 
-            // when & then
             assertThatThrownBy(() -> reviewService.deleteReview(1000L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Review not found with id: 1000");
@@ -488,7 +361,6 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should update driver rating when creating review")
         void updateDriverRating_ShouldBeCalledWhenCreatingReview() {
-            // given
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
             when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
@@ -498,10 +370,8 @@ class ReviewServiceImplTest {
             when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
             when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
 
-            // when
             reviewService.createReview(testRequest);
 
-            // then
             verify(reviewRepository, times(1)).getAverageRatingForDriver(10L);
             verify(userRepository, times(1)).findById(10L);
             verify(userRepository, times(1)).save(any(User.class));
@@ -510,7 +380,6 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should not update driver rating if driver not found")
         void updateDriverRating_DriverNotFound_ShouldNotUpdate() {
-            // given
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
             when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
@@ -520,10 +389,8 @@ class ReviewServiceImplTest {
             when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
             when(userRepository.findById(10L)).thenReturn(Optional.empty());
 
-            // when
             reviewService.createReview(testRequest);
 
-            // then
             verify(reviewRepository, times(1)).getAverageRatingForDriver(10L);
             verify(userRepository, times(1)).findById(10L);
             verify(userRepository, never()).save(any(User.class));
