@@ -193,6 +193,24 @@ class ReviewServiceImplTest {
                     .hasMessageContaining("User already reviewed this ride");
             verify(reviewRepository, never()).save(any(Review.class));
         }
+
+        @Test
+        @DisplayName("Should throw BusinessException when user is neither passenger nor driver")
+        void createReview_NeitherPassengerNorDriver_ShouldThrowBusinessException() {
+            User nonParticipant = new User();
+            nonParticipant.setId(99L);
+
+            ReviewRequestDto request = new ReviewRequestDto();
+            request.setRideId(100L);
+            request.setReviewerId(99L);
+            request.setRating(5);
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+
+            assertThatThrownBy(() -> reviewService.createReview(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("User was not a participant in this ride");
+        }
     }
 
     // ==================== GET REVIEWS BY RIDE TESTS ====================
