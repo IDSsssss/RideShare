@@ -656,6 +656,8 @@ class RideServiceImplTest {
             // given
             when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
             when(routeRepository.findAll()).thenReturn(List.of(testRoute));
+            // ✅ НУЖНЫ ЭТИ МОКИ
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -664,7 +666,6 @@ class RideServiceImplTest {
 
             // then
             assertThat(result).hasSize(2);
-            // Существующий список пополнился
             assertThat(testDriver.getRidesAsDriver()).hasSize(2);
             verify(userRepository, times(1)).save(testDriver);
         }
@@ -680,6 +681,8 @@ class RideServiceImplTest {
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(driverWithNullList));
             when(routeRepository.findAll()).thenReturn(List.of(testRoute));
+            // ✅ НУЖНЫ ЭТИ МОКИ
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
