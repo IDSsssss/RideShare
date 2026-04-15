@@ -336,6 +336,15 @@ class RideServiceImplTest {
     @DisplayName("updateRideStatus() tests")
     class UpdateRideStatusTests {
 
+        private Ride existingRide;
+
+        @BeforeEach
+        void setUp() {
+            existingRide = new Ride();
+            existingRide.setId(100L);
+            existingRide.setStatus(RideStatus.SCHEDULED);
+        }
+
         @Test
         @DisplayName("Should update status to IN_PROGRESS successfully")
         void updateRideStatus_ToInProgress_ShouldReturnUpdatedRide() {
@@ -350,6 +359,133 @@ class RideServiceImplTest {
             // then
             assertThat(result).isNotNull();
             assertThat(testRide.getStatus()).isEqualTo(RideStatus.IN_PROGRESS);
+        }
+
+        @Test
+        @DisplayName("Should update status to IN_PROGRESS successfully")
+        void updateRideStatus_ToInProgress_ShouldSucceed() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRideStatus(100L, "IN_PROGRESS");
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(existingRide.getStatus()).isEqualTo(RideStatus.IN_PROGRESS);
+            verify(rideRepository, times(1)).save(existingRide);
+        }
+
+        @Test
+        @DisplayName("Should update status to COMPLETED successfully")
+        void updateRideStatus_ToCompleted_ShouldSucceed() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRideStatus(100L, "COMPLETED");
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(existingRide.getStatus()).isEqualTo(RideStatus.COMPLETED);
+            verify(rideRepository, times(1)).save(existingRide);
+        }
+
+        @Test
+        @DisplayName("Should update status to CANCELLED when no bookings")
+        void updateRideStatus_ToCancelled_NoBookings_ShouldSucceed() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(0);
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRideStatus(100L, "CANCELLED");
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(existingRide.getStatus()).isEqualTo(RideStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when id is null")
+        void updateRideStatus_NullId_ShouldThrowException() {
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRideStatus(null, "IN_PROGRESS"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Ride ID cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ride not found")
+        void updateRideStatus_RideNotFound_ShouldThrowException() {
+            // given
+            when(rideRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRideStatus(999L, "IN_PROGRESS"))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Ride not found with id: 999");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when status is empty")
+        void updateRideStatus_EmptyStatus_ShouldThrowException() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRideStatus(100L, ""))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Status cannot be null or empty");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when status is blank")
+        void updateRideStatus_BlankStatus_ShouldThrowException() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRideStatus(100L, "   "))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Status cannot be null or empty");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when cancelling ride with existing bookings")
+        void updateRideStatus_CancelWithBookings_ShouldThrowException() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(2);
+
+            // when & then
+            assertThatThrownBy(() -> rideService.updateRideStatus(100L, "CANCELLED"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Cannot cancel ride with existing bookings");
+            verify(rideRepository, never()).save(any(Ride.class));
+        }
+
+        @Test
+        @DisplayName("Should handle null bookedSeats when cancelling (no bookings)")
+        void updateRideStatus_CancelWithNullBookedSeats_ShouldSucceed() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(null);
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            RideResponseDto result = rideService.updateRideStatus(100L, "CANCELLED");
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(existingRide.getStatus()).isEqualTo(RideStatus.CANCELLED);
         }
 
         @Test
