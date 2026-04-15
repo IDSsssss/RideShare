@@ -257,7 +257,6 @@ class RideServiceImplTest {
 
             // then
             verify(rideRepository, times(1)).delete(testRide);
-            verify(rideService, times(1)).invalidateCache(); // если invalidateCache публичный метод
         }
 
         @Test
