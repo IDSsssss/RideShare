@@ -343,19 +343,24 @@ class UserServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw ConflictException when new email already exists")
+        @DisplayName("Should throw ConflictException when updating to existing email")
         void updateUser_EmailAlreadyExists_ShouldThrowConflictException() {
             // given
             UserRequestDto updateDto = new UserRequestDto();
             updateDto.setEmail("existing@example.com");
 
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            User existingUser = new User();
+            existingUser.setId(1L);
+            existingUser.setEmail("old@example.com");
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
             when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
             // when & then
             assertThatThrownBy(() -> userService.updateUser(1L, updateDto))
                     .isInstanceOf(ConflictException.class)
                     .hasMessageContaining("Email existing@example.com is already taken");
+
             verify(userRepository, never()).save(any(User.class));
         }
     }
