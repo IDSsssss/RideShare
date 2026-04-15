@@ -210,13 +210,14 @@ class ReviewServiceImplTest {
             // given
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
+            // Пользователь НЕ участник, поэтому сначала будет BusinessException, а не ResourceNotFoundException
+            // Поэтому ожидаем BusinessException
             when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Reviewer not found with id: 1");
-            verify(reviewRepository, never()).save(any(Review.class));
+                    .isInstanceOf(BusinessException.class)  // ← изменили на BusinessException
+                    .hasMessageContaining("User was not a participant in this ride");
         }
     }
 

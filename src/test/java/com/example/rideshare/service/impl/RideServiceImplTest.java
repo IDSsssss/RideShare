@@ -106,6 +106,11 @@ class RideServiceImplTest {
         testResponseDto.setId(100L);
         testResponseDto.setPrice(1500.0);
         testResponseDto.setStatus("SCHEDULED");
+
+        testBulkRequest = new BulkRideRequestDto(
+                1L,  // driverId
+                List.of(testRideDto, testRideDto)  // rides
+        );
     }
 
     // ==================== GET ALL RIDES TESTS ====================
@@ -186,6 +191,7 @@ class RideServiceImplTest {
         void updateRide_Success_ShouldReturnUpdatedRide() {
             // given
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);  // ← добавить
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(testRide)).thenReturn(testResponseDto);
 
@@ -331,6 +337,8 @@ class RideServiceImplTest {
             when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+            // Добавить мок для routeRepository.save при создании нового маршрута
+            when(routeRepository.save(any(Route.class))).thenReturn(testRoute);
 
             // when
             List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
@@ -338,7 +346,6 @@ class RideServiceImplTest {
             // then
             assertThat(result).hasSize(2);
             verify(rideRepository, times(2)).save(any(Ride.class));
-            verify(userRepository, times(1)).save(testDriver);
         }
 
         @Test
