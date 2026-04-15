@@ -183,18 +183,23 @@ class ReviewServiceImplTest {
         @DisplayName("Should throw exception when user was not participant")
         void createReview_UserNotParticipant_ShouldThrowException() {
             // given
-            // Создаём пользователя, который НЕ является участником
             User nonParticipant = new User();
             nonParticipant.setId(99L);
             nonParticipant.setName("Non Participant");
 
-            testRequest.setReviewerId(99L);
+            ReviewRequestDto request = new ReviewRequestDto();
+            request.setRideId(100L);
+            request.setReviewerId(99L);
+            request.setRating(5);
+            request.setComment("Great ride!");
 
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
+            // Удали эту строку, если она есть:
+            // when(reviewRepository.existsByReviewerIdAndRideId(anyLong(), anyLong())).thenReturn(false);
 
             // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+            assertThatThrownBy(() -> reviewService.createReview(request))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User was not a participant in this ride");
         }

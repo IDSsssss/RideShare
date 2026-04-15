@@ -330,20 +330,16 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should create multiple rides successfully")
         void createRidesBulk_Success_ShouldReturnListOfRides() {
-            // given
+
             when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
             when(routeRepository.findAll()).thenReturn(List.of(testRoute));
             when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
             when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
-            // Удали эту строку (336):
-            // when(routeRepository.save(any(Route.class))).thenReturn(testRoute);
 
-            // when
             List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
 
-            // then
             assertThat(result).hasSize(2);
             verify(rideRepository, times(2)).save(any(Ride.class));
         }
