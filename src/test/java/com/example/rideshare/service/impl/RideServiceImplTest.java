@@ -703,6 +703,38 @@ class RideServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should handle duplicate routes in repository")
+        void createRidesBulk_WhenDuplicateRoutesExist_ShouldUseFirstRoute() {
+            // given
+            // Создаём ДВА ОДИНАКОВЫХ маршрута (дубликаты)
+            Route route1 = new Route();
+            route1.setId(10L);
+            route1.setStartPoint("Москва");
+            route1.setEndPoint("СПб");
+
+            Route route2 = new Route();
+            route2.setId(20L);
+            route2.setStartPoint("Москва");
+            route2.setEndPoint("СПб");  // ТОТ ЖЕ САМЫЙ ключ "Москва|СПб"
+
+            List<Route> routesWithDuplicates = Arrays.asList(route1, route2);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+            when(routeRepository.findAll()).thenReturn(routesWithDuplicates); // ← два одинаковых маршрута
+            when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
+            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
+
+            // then
+            assertThat(result).hasSize(2);
+            // Merge function выбрала первый маршрут (route1 с id=10), а не route2
+            verify(rideRepository, times(2)).save(any(Ride.class));
+        }
+
+        @Test
         @DisplayName("Should handle duplicate routes in database")
         void createRidesBulk_WithRealDuplicateRoutes_ShouldUseExisting() {
             // given - создаём реальные маршруты в БД
@@ -1320,13 +1352,10 @@ class RideServiceImplTest {
             // Первый вызов заполняет кэш (сохраняются ВСЕ 5 элементов)
             rideService.searchRides(searchRequest);
 
-            // Сбрасываем моки
             reset(rideRepository, rideMapper);
 
-            // when
             Page<RideResponseDto> result = rideService.searchRides(searchRequest);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2); // end=6, но size=5 → берём элементы с 3 по 4
             verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
@@ -1335,7 +1364,7 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should work correctly with page size 1")
         void searchRides_WithPageSizeOne_ShouldReturnSingleElement() {
-            // given
+
             Pageable pageable = PageRequest.of(0, 1);
             searchRequest.setPageable(pageable);
 
@@ -1343,16 +1372,12 @@ class RideServiceImplTest {
                     .thenReturn(mockRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
-            // Первый вызов заполняет кэш
             rideService.searchRides(searchRequest);
 
-            // Сбрасываем моки
             reset(rideRepository, rideMapper);
 
-            // when
             Page<RideResponseDto> result = rideService.searchRides(searchRequest);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
             verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
@@ -1361,17 +1386,14 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should work correctly with empty cached data")
         void searchRides_WithEmptyCachedData_ShouldReturnEmptyPage() {
-            // given
             when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
-                    .thenReturn(List.of()); // пустой результат
+                    .thenReturn(List.of());
 
             Pageable pageable = PageRequest.of(0, 10);
             searchRequest.setPageable(pageable);
 
-            // when
             Page<RideResponseDto> result = rideService.searchRides(searchRequest);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getContent()).isEmpty();
             assertThat(result.getTotalElements()).isZero();
