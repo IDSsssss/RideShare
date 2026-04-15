@@ -4,10 +4,7 @@ import com.example.rideshare.exception.BusinessException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.RideMapper;
 import com.example.rideshare.mapper.RouteMapper;
-import com.example.rideshare.model.dto.BulkRideRequestDto;
-import com.example.rideshare.model.dto.RideRequestDto;
-import com.example.rideshare.model.dto.RideResponseDto;
-import com.example.rideshare.model.dto.RouteRequestDto;
+import com.example.rideshare.model.dto.*;
 import com.example.rideshare.model.entity.Ride;
 import com.example.rideshare.model.entity.Route;
 import com.example.rideshare.model.entity.User;
@@ -24,6 +21,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import com.example.rideshare.model.dto.RideSearchRequest;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -400,6 +401,187 @@ class RideServiceImplTest {
             assertThatThrownBy(() -> rideService.createRidesBulk(testBulkRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("DEMO ERROR");
+        }
+    }
+
+    @Nested
+    @DisplayName("searchRides() tests")
+    class SearchRidesTests {
+
+        private RideSearchRequest searchRequest;
+        private Pageable pageable;
+        private List<Ride> mockRides;
+        private List<RideResponseDto> mockResponses;
+
+        @BeforeEach
+        void setUp() {
+            pageable = PageRequest.of(0, 10);
+
+            mockRides = Arrays.asList(testRide, testRide);
+            mockResponses = Arrays.asList(testResponseDto, testResponseDto);
+
+            searchRequest = new RideSearchRequest();
+            searchRequest.setStartPoint("Москва");
+            searchRequest.setEndPoint("СПб");
+            searchRequest.setFromDate(LocalDateTime.now());
+            searchRequest.setToDate(LocalDateTime.now().plusDays(30));
+            searchRequest.setMinPrice(1000.0);
+            searchRequest.setMaxPrice(3000.0);
+            searchRequest.setMinSeats(2);
+            searchRequest.setPageable(pageable);
+            searchRequest.setUseNative(false);
+        }
+
+        @Test
+        @DisplayName("Should return cached data when cache hit")
+        void searchRides_CacheHit_ShouldReturnCachedData() {
+            // given
+            List<RideResponseDto> cachedContent = mockResponses;
+
+            // Сначала заполняем кэш
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняет кэш
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки для второго вызова
+            reset(rideRepository, rideMapper);
+
+            // Второй вызов — должен взять из кэша (репозиторий не вызывается)
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should search with JPQL when cache miss and useNative=false")
+        void searchRides_CacheMiss_JPQL_ShouldSearchFromDatabase() {
+            // given
+            when(rideRepository.searchRides(
+                    eq("Москва"), eq("СПб"), any(), any(), eq(1000.0), eq(3000.0), eq(2)))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should search with Native query when cache miss and useNative=true")
+        void searchRides_CacheMiss_Native_ShouldSearchFromDatabase() {
+            // given
+            searchRequest.setUseNative(true);
+            when(rideRepository.searchRidesNative(
+                    eq("Москва"), eq("СПб"), any(), any(), eq(1000.0), eq(3000.0), eq(2)))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should return empty page when no results")
+        void searchRides_NoResults_ShouldReturnEmptyPage() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(List.of());
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+        }
+
+        @Test
+        @DisplayName("Should apply pagination correctly")
+        void searchRides_Pagination_ShouldReturnCorrectPage() {
+            // given
+            Pageable pageable2 = PageRequest.of(0, 1);
+            searchRequest.setPageable(pageable2);
+
+            List<Ride> singleRide = List.of(testRide);
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(singleRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getPageable().getPageSize()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Should handle empty cache after invalidation")
+        void searchRides_CacheInvalidated_ShouldSearchAgain() {
+            // given
+            // Заполняем кэш
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            rideService.searchRides(searchRequest);
+
+            // Инвалидируем кэш
+            rideService.invalidateCache();
+
+            // Сбрасываем счётчики вызовов
+            reset(rideRepository, rideMapper);
+
+            // Настраиваем моки для второго поиска
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            // Репозиторий должен быть вызван снова (кэш очищен)
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should handle null filters correctly")
+        void searchRides_NullFilters_ShouldSearchWithoutFilters() {
+            // given
+            RideSearchRequest requestWithNulls = new RideSearchRequest();
+            requestWithNulls.setPageable(pageable);
+            requestWithNulls.setUseNative(false);
+
+            when(rideRepository.searchRides(null, null, null, null, null, null, null))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(requestWithNulls);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(rideRepository, times(1)).searchRides(null, null, null, null, null, null, null);
         }
     }
 
