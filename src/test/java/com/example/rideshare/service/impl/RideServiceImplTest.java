@@ -68,7 +68,6 @@ class RideServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Инициализация тестовых данных
         testDriver = new User();
         testDriver.setId(1L);
         testDriver.setName("Test Driver");
@@ -114,8 +113,6 @@ class RideServiceImplTest {
         );
     }
 
-    // ==================== GET ALL RIDES TESTS ====================
-
     @Nested
     @DisplayName("getAllRides() tests")
     class GetAllRidesTests {
@@ -123,16 +120,13 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should return list of all rides")
         void getAllRides_Success_ShouldReturnRidesList() {
-            // given
             List<Ride> rides = Arrays.asList(testRide, testRide);
             List<RideResponseDto> expectedResponse = Arrays.asList(testResponseDto, testResponseDto);
             when(rideRepository.findAllWithDetailsViaEntityGraph()).thenReturn(rides);
             when(rideMapper.toResponseDtoList(rides)).thenReturn(expectedResponse);
 
-            // when
             List<RideResponseDto> result = rideService.getAllRides();
 
-            // then
             assertThat(result).hasSize(2);
             verify(rideRepository, times(1)).findAllWithDetailsViaEntityGraph();
         }
@@ -1278,6 +1272,29 @@ class RideServiceImplTest {
             assertThat((Integer) statsAfter.get("cacheSize")).isZero();
             assertThat((Long) statsAfter.get("modificationCount"))
                     .isGreaterThan((Long) statsBefore.get("modificationCount"));
+        }
+
+        @Test
+        @DisplayName("Should use cache when modification count unchanged and key exists")
+        void searchRides_CacheHit_WhenConditionsMet() throws Exception {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняет кэш
+            Page<RideResponseDto> firstResult = rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // Второй вызов — должен взять из кэша
+            Page<RideResponseDto> secondResult = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(secondResult).isNotNull();
+            assertThat(secondResult.getContent()).hasSize(2);
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
         }
     }
 
