@@ -205,27 +205,6 @@ class ReviewServiceImplTest {
 //        }
 
         @Test
-        @DisplayName("Should create review when user is passenger")
-        void createReview_UserIsPassenger_ShouldSucceed() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
-            when(reviewMapper.toEntity(any(ReviewRequestDto.class))).thenReturn(testReview);
-            when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
-            when(reviewMapper.toResponseDto(any(Review.class))).thenReturn(testResponse);
-            when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
-            when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
-
-            // when
-            ReviewResponseDto result = reviewService.createReview(testRequest);
-
-            // then
-            assertThat(result).isNotNull();
-            verify(reviewRepository, times(1)).save(any(Review.class));
-        }
-
-        @Test
         @DisplayName("Should create review when user is driver")
         void createReview_UserIsDriver_ShouldSucceed() {
             // given
@@ -250,66 +229,6 @@ class ReviewServiceImplTest {
             // then
             assertThat(result).isNotNull();
             verify(reviewRepository, times(1)).save(any(Review.class));
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when user is not participant")
-        void createReview_UserNotParticipant_ShouldThrowBusinessException() {
-            // given
-            User nonParticipant = new User();
-            nonParticipant.setId(99L);
-
-            ReviewRequestDto request = new ReviewRequestDto();
-            request.setRideId(100L);
-            request.setReviewerId(99L);
-            request.setRating(5);
-
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(request))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("User was not a participant in this ride");
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when user already reviewed")
-        void createReview_AlreadyReviewed_ShouldThrowBusinessException() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(true);
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("User already reviewed this ride");
-        }
-
-        @Test
-        @DisplayName("Should throw ResourceNotFoundException when reviewer not found in DB")
-        void createReview_ReviewerNotFound_ShouldThrowResourceNotFoundException() {
-            // given
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Reviewer not found with id: 1");
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when ride is not completed")
-        void createReview_RideNotCompleted_ShouldThrowBusinessException() {
-            // given
-            testRide.setStatus(RideStatus.SCHEDULED);
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-
-            // when & then
-            assertThatThrownBy(() -> reviewService.createReview(testRequest))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Cannot review ride that is not completed");
         }
 
         @Test
@@ -382,6 +301,88 @@ class ReviewServiceImplTest {
 //                    .isInstanceOf(BusinessException.class)
 //                    .hasMessageContaining("User was not a participant in this ride");
 //        }
+
+        @Test
+        @DisplayName("Should create review when user is passenger")
+        void createReview_UserIsPassenger_ShouldSucceed() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
+            when(reviewMapper.toEntity(any(ReviewRequestDto.class))).thenReturn(testReview);
+            when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
+            when(reviewMapper.toResponseDto(any(Review.class))).thenReturn(testResponse);
+            when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
+            when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
+
+            // when
+            ReviewResponseDto result = reviewService.createReview(testRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(reviewRepository, times(1)).save(any(Review.class));
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when user is not participant")
+        void createReview_UserNotParticipant_ShouldThrowBusinessException() {
+            // given
+            User nonParticipant = new User();
+            nonParticipant.setId(99L);
+
+            ReviewRequestDto request = new ReviewRequestDto();
+            request.setRideId(100L);
+            request.setReviewerId(99L);
+            request.setRating(5);
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(userRepository.findById(99L)).thenReturn(Optional.of(nonParticipant));
+            // БЕЗ лишних stubbing
+
+            // when & then
+            assertThatThrownBy(() -> reviewService.createReview(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("User was not a participant in this ride");
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when reviewer not found in DB")
+        void createReview_ReviewerNotFound_ShouldThrowResourceNotFoundException() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Reviewer not found with id: 1");
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when ride is not completed")
+        void createReview_RideNotCompleted_ShouldThrowBusinessException() {
+            // given
+            testRide.setStatus(RideStatus.SCHEDULED);
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+
+            // when & then
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Cannot review ride that is not completed");
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when user already reviewed")
+        void createReview_AlreadyReviewed_ShouldThrowBusinessException() {
+            // given
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("User already reviewed this ride");
+        }
     }
 
     // ==================== GET REVIEWS BY RIDE TESTS ====================
