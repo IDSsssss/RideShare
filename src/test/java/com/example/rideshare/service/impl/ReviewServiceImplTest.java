@@ -394,5 +394,27 @@ class ReviewServiceImplTest {
             verify(userRepository, times(1)).findById(10L);
             verify(userRepository, never()).save(any(User.class));
         }
+
+        @Test
+        @DisplayName("Should set driver rating to 0.0 when average rating is null")
+        void updateDriverRating_WhenAvgRatingNull_ShouldSetRatingToZero() {
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
+            when(reviewMapper.toEntity(any(ReviewRequestDto.class))).thenReturn(testReview);
+            when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
+            when(reviewMapper.toResponseDto(any(Review.class))).thenReturn(testResponse);
+            when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(null); // ← null
+            when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
+            when(userRepository.save(any(User.class))).thenReturn(testDriver);
+
+            reviewService.createReview(testRequest);
+
+            verify(reviewRepository, times(1)).getAverageRatingForDriver(10L);
+            verify(userRepository, times(1)).findById(10L);
+            verify(userRepository, times(1)).save(argThat(user ->
+                    user.getRating() == 0.0  // проверяем, что рейтинг установлен в 0.0
+            ));
+        }
     }
 }
