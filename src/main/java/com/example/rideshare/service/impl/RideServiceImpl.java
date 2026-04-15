@@ -1,7 +1,8 @@
 package com.example.rideshare.service.impl;
 
-import com.example.rideshare.model.dto.RideRequestDto;
+import com.example.rideshare.model.dto.BulkRideRequestDto;
 import com.example.rideshare.model.dto.RideResponseDto;
+import com.example.rideshare.model.dto.RideRequestDto;
 import com.example.rideshare.model.dto.RideSearchCriteria;
 import com.example.rideshare.model.dto.RideSearchRequest;
 import com.example.rideshare.model.entity.Ride;
@@ -14,6 +15,7 @@ import com.example.rideshare.mapper.RouteMapper;
 import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
+import com.example.rideshare.repository.RouteRepository;
 import com.example.rideshare.repository.UserRepository;
 import com.example.rideshare.service.RideService;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +25,20 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Map;
+import java.util.Optional;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -39,6 +48,7 @@ public class RideServiceImpl implements RideService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final RouteRepository routeRepository;
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
     private final Map<RideSearchCriteria, Page<RideResponseDto>> searchCache = new HashMap<>();
@@ -82,40 +92,6 @@ public class RideServiceImpl implements RideService {
                 new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
         return rideMapper.toResponseDto(ride);
-    }
-
-    @Override
-    @Transactional
-    public RideResponseDto createRide(RideRequestDto request) {
-        if (request.getDriverId() == null) {
-            throw new BusinessException(DRIVER_ID_NULL);
-        }
-
-        User driver = userRepository.findById(request.getDriverId())
-                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_NOT_FOUND + request.getDriverId()));
-
-        if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new BusinessException(TIME_IN_FUTURE);
-        }
-
-        Ride ride = rideMapper.toEntity(request);
-        ride.setDriver(driver);
-        ride.setStatus(RideStatus.SCHEDULED);
-        ride.setBookings(new ArrayList<>());
-
-        Route route = routeMapper.toEntity(request.getRoute());
-        ride.setRoute(route);
-
-        Ride savedRide = rideRepository.save(ride);
-
-        if (driver.getRidesAsDriver() == null) {
-            driver.setRidesAsDriver(new ArrayList<>());
-        }
-        driver.getRidesAsDriver().add(savedRide);
-
-        this.invalidateCache();
-
-        return rideMapper.toResponseDto(savedRide);
     }
 
     @Override
@@ -275,6 +251,87 @@ public class RideServiceImpl implements RideService {
         }
 
         return resultPage;
+    }
+
+    @Override
+    public List<RideResponseDto> createRidesBulk(BulkRideRequestDto request) {
+
+        Long driverId = request.driverId();
+
+        User driver = userRepository.findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found: " + driverId));
+
+        Set<String> routeKeys = request.rides().stream()
+                .map(ride -> ride.getRoute().getStartPoint() + "|" + ride.getRoute().getEndPoint())
+                .collect(Collectors.toSet());
+
+        Map<String, Route> routesByKey = routeRepository.findAll().stream()
+                .filter(r -> routeKeys.contains(r.getStartPoint() + "|" + r.getEndPoint()))
+                .collect(Collectors.toMap(
+                        r -> r.getStartPoint() + "|" + r.getEndPoint(),
+                        Function.identity(),
+                        (existing, replacement) -> existing
+                ));
+
+        List<RideResponseDto> results = new ArrayList<>();
+
+        try {
+            results = IntStream.range(0, request.rides().size())
+                    .mapToObj(i -> {
+                        int index = i + 1;
+                        RideRequestDto rideDto = request.rides().get(i);
+
+                        if (rideDto.getPrice() > 10000) {
+                            throw new RuntimeException("DEMO ERROR: Failed to process 3rd ride");
+                        }
+
+                        Optional.of(rideDto)
+                                .filter(r -> r.getDepartureTime().isAfter(LocalDateTime.now()))
+                                .orElseThrow(() -> new BusinessException(
+                                        "Departure time must be in the future for ride #" + index));
+
+                        String routeKey = rideDto.getRoute().getStartPoint() + "|" + rideDto.getRoute().getEndPoint();
+                        Route route = Optional.ofNullable(routesByKey.get(routeKey))
+                                .orElseGet(() -> {
+                                    Route newRoute = routeMapper.toEntity(rideDto.getRoute());
+                                    Route savedRoute = routeRepository.save(newRoute);
+                                    routesByKey.put(routeKey, savedRoute);
+                                    return savedRoute;
+                                });
+
+                        Ride ride = rideMapper.toEntity(rideDto);
+                        ride.setDriver(driver);
+                        ride.setRoute(route);
+                        ride.setStatus(RideStatus.SCHEDULED);
+                        ride.setBookings(new ArrayList<>());
+
+                        Ride savedRide = rideRepository.save(ride);
+
+                        Optional.ofNullable(driver.getRidesAsDriver())
+                                .ifPresentOrElse(
+                                        list -> list.add(savedRide),
+                                        () -> {
+                                            List<Ride> newList = new ArrayList<>();
+                                            newList.add(savedRide);
+                                            driver.setRidesAsDriver(newList);
+                                        }
+                                );
+
+                        return rideMapper.toResponseDto(savedRide);
+                    })
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            boolean hadTransaction = TransactionSynchronizationManager.isActualTransactionActive();
+            throw new RuntimeException("Bulk ride creation failed after " + results.size()
+                    + " rides. Transaction active: " + hadTransaction + ". Error: " + e.getMessage());
+        }
+
+        Optional.of(driver).ifPresent(userRepository::save);
+
+        invalidateCache();
+
+        return results;
     }
 
     public void invalidateCache() {

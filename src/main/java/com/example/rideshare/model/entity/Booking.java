@@ -31,7 +31,7 @@ public class Booking {
     private Integer seats;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "booking_status")
+    @Column(nullable = false)
     private BookingStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)

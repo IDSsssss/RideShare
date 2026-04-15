@@ -2,6 +2,8 @@ package com.example.rideshare.service;
 
 import com.example.rideshare.model.dto.RideRequestDto;
 import com.example.rideshare.model.dto.RideResponseDto;
+import com.example.rideshare.model.dto.BulkRideRequestDto;
+
 import java.util.List;
 
 public interface RideService {
@@ -9,11 +11,11 @@ public interface RideService {
 
     RideResponseDto getRideById(Long id);
 
-    RideResponseDto createRide(RideRequestDto request);
-
     RideResponseDto updateRide(Long id, RideRequestDto request);
 
     void deleteRide(Long id);
 
     RideResponseDto updateRideStatus(Long id, String status);
+
+    List<RideResponseDto> createRidesBulk(BulkRideRequestDto request);
 }

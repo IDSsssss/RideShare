@@ -19,6 +19,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
 import lombok.Data;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,7 +48,7 @@ public class Ride {
     private Double price;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ride_status")
+    @Column(nullable = false)
     private RideStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -55,8 +58,8 @@ public class Ride {
     @OneToMany(mappedBy = "ride", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Booking> bookings = new ArrayList<>();
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "route_id", unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "route_id")
     private Route route;
 
     public List<User> getPassengers() {

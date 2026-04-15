@@ -16,11 +16,6 @@ import java.time.LocalDateTime;
 @Schema(description = "Ride creation/update request")
 public class RideRequestDto {
 
-    @Schema(description = "Driver ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "Driver ID is required")
-    @Positive(message = "Driver ID must be positive")
-    private Long driverId;
-
     @Schema(description = "Departure date and time", example = "2026-04-10 09:00:00",
             requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Departure time is required")

@@ -3,6 +3,7 @@ package com.example.rideshare.controller;
 import com.example.rideshare.model.dto.RideRequestDto;
 import com.example.rideshare.model.dto.RideResponseDto;
 import com.example.rideshare.model.dto.RideSearchRequest;
+import com.example.rideshare.model.dto.BulkRideRequestDto;
 import com.example.rideshare.service.impl.RideServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,8 +45,8 @@ public class RideController extends BaseController {
     }
 
     @PostMapping
-    public ResponseEntity<RideResponseDto> createRide(@Valid @RequestBody RideRequestDto request) {
-        return created(rideService.createRide(request));
+    public ResponseEntity<List<RideResponseDto>> createRide(@Valid @RequestBody BulkRideRequestDto request) {
+        return created(rideService.createRidesBulk(request));
     }
 
     @PutMapping("/{id}")

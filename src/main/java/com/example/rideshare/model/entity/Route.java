@@ -1,17 +1,22 @@
 package com.example.rideshare.model.entity;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Column;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.OneToMany;
 import lombok.Data;
+import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
 @Table(name = "routes")
+@ToString(exclude = {"ride"})
 public class Route {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,6 +37,6 @@ public class Route {
     @Column(length = 1000)
     private String waypoints;
 
-    @OneToOne(mappedBy = "route")
-    private Ride ride;
+    @OneToMany(mappedBy = "route")
+    private List<Ride> rides = new ArrayList<>();
 }
