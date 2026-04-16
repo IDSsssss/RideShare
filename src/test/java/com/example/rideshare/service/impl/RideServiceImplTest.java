@@ -178,6 +178,7 @@ class RideServiceImplTest {
     @Nested
     @DisplayName("updateRide() tests")
     class UpdateRideTests {
+
         @Test
         @DisplayName("Should update ride successfully")
         void updateRide_Success_ShouldReturnUpdatedRide() {
@@ -193,7 +194,41 @@ class RideServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should update route when route exists")
+        @DisplayName("Should throw exception when id is null")
+        void updateRide_NullId_ShouldThrowException() {
+            assertThatThrownBy(() -> rideService.updateRide(null, testRideDto))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Ride ID cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ride not found")
+        void updateRide_RideNotFound_ShouldThrowException() {
+            when(rideRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> rideService.updateRide(999L, testRideDto))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Ride not found with id: 999");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when departure time is in past")
+        void updateRide_DepartureTimeInPast_ShouldThrowException() {
+            RideRequestDto pastTimeRequest = new RideRequestDto();
+            pastTimeRequest.setDepartureTime(LocalDateTime.now().minusDays(1));
+            pastTimeRequest.setAvailableSeats(4);
+            pastTimeRequest.setPrice(1500.0);
+            pastTimeRequest.setRoute(new RouteRequestDto());
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+
+            assertThatThrownBy(() -> rideService.updateRide(100L, pastTimeRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Departure time must be in the future");
+        }
+
+        @Test
+        @DisplayName("Should update route when both routes exist")
         void updateRide_BothRoutesExist_ShouldUpdateRoute() {
             Ride existingRide = new Ride();
             existingRide.setId(100L);
@@ -233,19 +268,47 @@ class RideServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should NOT update route when request route is null")
-        void updateRide_RequestRouteIsNull_ShouldNotUpdateRoute() {
+        @DisplayName("Should NOT update route when existing route is null")
+        void updateRide_ExistingRouteIsNull_ShouldNotUpdateRoute() {
             Ride existingRide = new Ride();
             existingRide.setId(100L);
+            existingRide.setRoute(null);
             existingRide.setDepartureTime(LocalDateTime.now().plusDays(7));
             existingRide.setAvailableSeats(4);
             existingRide.setPrice(1500.0);
 
+            RouteRequestDto routeDto = new RouteRequestDto();
+            routeDto.setStartPoint("Москва");
+            routeDto.setEndPoint("Казань");
+
+            RideRequestDto updateRequest = new RideRequestDto();
+            updateRequest.setRoute(routeDto);
+            updateRequest.setDepartureTime(LocalDateTime.now().plusDays(14));
+            updateRequest.setAvailableSeats(3);
+            updateRequest.setPrice(2000.0);
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            rideService.updateRide(100L, updateRequest);
+
+            verify(routeMapper, never()).toEntity(any(RouteRequestDto.class));
+        }
+
+        @Test
+        @DisplayName("Should NOT update route when request route is null")
+        void updateRide_RequestRouteIsNull_ShouldNotUpdateRoute() {
+            Ride existingRide = new Ride();
+            existingRide.setId(100L);
             Route existingRoute = new Route();
             existingRoute.setId(10L);
             existingRoute.setStartPoint("Москва");
             existingRoute.setEndPoint("СПб");
             existingRide.setRoute(existingRoute);
+            existingRide.setDepartureTime(LocalDateTime.now().plusDays(7));
+            existingRide.setAvailableSeats(4);
+            existingRide.setPrice(1500.0);
 
             RideRequestDto updateRequest = new RideRequestDto();
             updateRequest.setRoute(null);
@@ -263,12 +326,43 @@ class RideServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when ride not found")
-        void updateRide_NotFound_ShouldThrowException() {
-            when(rideRepository.findById(999L)).thenReturn(Optional.empty());
+        @DisplayName("Should NOT update route when both routes are null")
+        void updateRide_BothRoutesNull_ShouldNotUpdateRoute() {
+            Ride existingRide = new Ride();
+            existingRide.setId(100L);
+            existingRide.setRoute(null);
+            existingRide.setDepartureTime(LocalDateTime.now().plusDays(7));
+            existingRide.setAvailableSeats(4);
+            existingRide.setPrice(1500.0);
 
-            assertThatThrownBy(() -> rideService.updateRide(999L, testRideDto))
-                    .isInstanceOf(ResourceNotFoundException.class);
+            RideRequestDto updateRequest = new RideRequestDto();
+            updateRequest.setRoute(null);
+            updateRequest.setDepartureTime(LocalDateTime.now().plusDays(14));
+            updateRequest.setAvailableSeats(3);
+            updateRequest.setPrice(2000.0);
+
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(existingRide));
+            when(rideRepository.save(any(Ride.class))).thenReturn(existingRide);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            rideService.updateRide(100L, updateRequest);
+
+            verify(routeMapper, never()).toEntity(any(RouteRequestDto.class));
+        }
+
+        @Test
+        @DisplayName("Should invalidate cache after update")
+        void updateRide_ShouldInvalidateCache() {
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(routeMapper.toEntity(any(RouteRequestDto.class))).thenReturn(testRoute);
+            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
+            when(rideMapper.toResponseDto(testRide)).thenReturn(testResponseDto);
+
+            RideServiceImpl spyService = spy(rideService);
+
+            spyService.updateRide(100L, testRideDto);
+
+            verify(spyService, times(1)).invalidateCache();
         }
     }
 
