@@ -190,7 +190,7 @@ public class RideServiceImpl implements RideService {
 
         cacheLock.readLock().lock();
         try {
-            if (modificationCount.get() == lastCacheModificationCount && searchCache.containsKey(cacheKey)) {
+            if (modificationCount.get() == lastCacheModificationCount) {
                 Page<RideResponseDto> cachedPage = searchCache.get(cacheKey);
                 cachedData = cachedPage.getContent();
             }
