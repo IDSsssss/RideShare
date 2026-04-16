@@ -655,6 +655,30 @@ class RideServiceImplTest {
             assertThatThrownBy(() -> rideService.createRidesBulk(testBulkRequest))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
+
+        @Test
+        @DisplayName("Should throw BusinessException when price > 10000 (demo error)")
+        void createRidesBulk_PriceTooHigh_ShouldThrowException() {
+            // given
+            RideRequestDto highPriceRide = new RideRequestDto();
+            highPriceRide.setPrice(15000.0);
+            highPriceRide.setDepartureTime(LocalDateTime.now().plusDays(7));
+            highPriceRide.setAvailableSeats(4);
+
+            RouteRequestDto routeDto = new RouteRequestDto();
+            routeDto.setStartPoint("Москва");
+            routeDto.setEndPoint("СПб");
+            highPriceRide.setRoute(routeDto);
+
+            BulkRideRequestDto bulkRequest = new BulkRideRequestDto(1L, List.of(highPriceRide));
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+
+            // when & then
+            assertThatThrownBy(() -> rideService.createRidesBulk(bulkRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("DEMO ERROR");
+        }
     }
 
     // ==================== SEARCH RIDES TESTS ====================
