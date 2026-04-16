@@ -254,6 +254,7 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
+    @Transactional
     public List<RideResponseDto> createRidesBulk(BulkRideRequestDto request) {
 
         Long driverId = request.driverId();
