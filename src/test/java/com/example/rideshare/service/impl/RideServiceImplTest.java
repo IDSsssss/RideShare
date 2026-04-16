@@ -512,7 +512,6 @@ class RideServiceImplTest {
         @ValueSource(strings = {"   ", "\t", "\n"})
         @DisplayName("Should throw exception when status is null, empty, or blank")
         void updateRideStatus_InvalidStatus_ShouldThrowException(String status) {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
 
             assertThatThrownBy(() -> rideService.updateRideStatus(100L, status))
                     .isInstanceOf(BusinessException.class)
