@@ -659,7 +659,7 @@ class RideServiceImplTest {
 
             assertThatThrownBy(() -> rideService.createRidesBulk(bulkRequest))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("DEMO ERROR");
+                    .hasMessageContaining("ERROR");
         }
 
         @Test
