@@ -692,7 +692,7 @@ class RideServiceImplTest {
             Route route2 = new Route();
             route2.setId(20L);
             route2.setStartPoint("Москва");
-            route2.setEndPoint("СПб");  // ТОТ ЖЕ САМЫЙ КЛЮЧ
+            route2.setEndPoint("СПб");
 
             List<Route> routesWithDuplicates = Arrays.asList(route1, route2);
 

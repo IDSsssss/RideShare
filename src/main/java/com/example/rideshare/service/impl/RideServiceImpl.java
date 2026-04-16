@@ -271,7 +271,7 @@ public class RideServiceImpl implements RideService {
         Map<String, Route> routesByKey = new HashMap<>();
         for (Route route : routeRepository.findAll()) {
             String key = route.getStartPoint() + "|" + route.getEndPoint();
-            if (routeKeys.contains(key) && !routesByKey.containsKey(key)) {
+            if (routeKeys.contains(key)) {
                 routesByKey.put(key, route);
             }
         }
