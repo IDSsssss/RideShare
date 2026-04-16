@@ -448,13 +448,9 @@ class RideServiceImplTest {
     @DisplayName("updateRideStatus() tests")
     class UpdateRideStatusTests {
 
-        private Ride existingRide;
-
         @BeforeEach
         void setUp() {
-            existingRide = new Ride();
-            existingRide.setId(100L);
-            existingRide.setStatus(RideStatus.SCHEDULED);
+            testRide.setStatus(RideStatus.SCHEDULED);
         }
 
         @Test
@@ -511,33 +507,30 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should throw exception when status is null")
         void updateRideStatus_NullStatus_ShouldThrowException() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-
             assertThatThrownBy(() -> rideService.updateRideStatus(100L, null))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Status cannot be null or empty");
+            verify(rideRepository, never()).findById(any());
             verify(rideRepository, never()).save(any(Ride.class));
         }
 
         @Test
         @DisplayName("Should throw exception when status is empty")
         void updateRideStatus_EmptyStatus_ShouldThrowException() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-
             assertThatThrownBy(() -> rideService.updateRideStatus(100L, ""))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Status cannot be null or empty");
+            verify(rideRepository, never()).findById(any());
             verify(rideRepository, never()).save(any(Ride.class));
         }
 
         @Test
         @DisplayName("Should throw exception when status is blank")
         void updateRideStatus_BlankStatus_ShouldThrowException() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-
             assertThatThrownBy(() -> rideService.updateRideStatus(100L, "   "))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Status cannot be null or empty");
+            verify(rideRepository, never()).findById(any());
             verify(rideRepository, never()).save(any(Ride.class));
         }
 
