@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,7 +45,6 @@ class RouteServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Инициализация тестовых данных
         testRoute = new Route();
         testRoute.setId(10L);
         testRoute.setStartPoint("Москва");
@@ -69,8 +69,6 @@ class RouteServiceImplTest {
         testResponseDto.setWaypoints("Тверь, Валдай");
     }
 
-    // ==================== GET ALL ROUTES TESTS ====================
-
     @Nested
     @DisplayName("getAllRoutes() tests")
     class GetAllRoutesTests {
@@ -78,16 +76,13 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should return list of all routes")
         void getAllRoutes_Success_ShouldReturnRoutesList() {
-            // given
             List<Route> routes = Arrays.asList(testRoute, testRoute);
             List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto, testResponseDto);
             when(routeRepository.findAll()).thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
 
-            // when
             List<RouteResponseDto> result = routeService.getAllRoutes();
 
-            // then
             assertThat(result).hasSize(2);
             verify(routeRepository, times(1)).findAll();
         }
@@ -95,19 +90,14 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should return empty list when no routes exist")
         void getAllRoutes_EmptyList_ShouldReturnEmptyList() {
-            // given
             when(routeRepository.findAll()).thenReturn(List.of());
             when(routeMapper.toResponseDtoList(List.of())).thenReturn(List.of());
 
-            // when
             List<RouteResponseDto> result = routeService.getAllRoutes();
 
-            // then
             assertThat(result).isEmpty();
         }
     }
-
-    // ==================== GET ROUTE BY ID TESTS ====================
 
     @Nested
     @DisplayName("getRouteById() tests")
@@ -116,14 +106,11 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should return route when id exists")
         void getRouteById_Success_ShouldReturnRoute() {
-            // given
             when(routeRepository.findById(10L)).thenReturn(Optional.of(testRoute));
             when(routeMapper.toResponseDto(testRoute)).thenReturn(testResponseDto);
 
-            // when
             RouteResponseDto result = routeService.getRouteById(10L);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getId()).isEqualTo(10L);
             assertThat(result.getStartPoint()).isEqualTo("Москва");
@@ -133,7 +120,6 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should throw exception when id is null")
         void getRouteById_NullId_ShouldThrowException() {
-            // when & then
             assertThatThrownBy(() -> routeService.getRouteById(null))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Route ID cannot be null");
@@ -143,17 +129,13 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should throw exception when route not found")
         void getRouteById_NotFound_ShouldThrowException() {
-            // given
             when(routeRepository.findById(999L)).thenReturn(Optional.empty());
 
-            // when & then
             assertThatThrownBy(() -> routeService.getRouteById(999L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Route not found with id: 999");
         }
     }
-
-    // ==================== CREATE ROUTE TESTS ====================
 
     @Nested
     @DisplayName("createRoute() tests")
@@ -162,15 +144,12 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should create route successfully")
         void createRoute_Success_ShouldReturnCreatedRoute() {
-            // given
             when(routeMapper.toEntity(testRouteDto)).thenReturn(testRoute);
             when(routeRepository.save(testRoute)).thenReturn(testRoute);
             when(routeMapper.toResponseDto(testRoute)).thenReturn(testResponseDto);
 
-            // when
             RouteResponseDto result = routeService.createRoute(testRouteDto);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getId()).isEqualTo(10L);
             verify(routeRepository, times(1)).save(testRoute);
@@ -179,7 +158,6 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should create route with null waypoints")
         void createRoute_NullWaypoints_ShouldCreateSuccessfully() {
-            // given
             testRouteDto.setWaypoints(null);
             testRoute.setWaypoints(null);
             testResponseDto.setWaypoints(null);
@@ -188,17 +166,13 @@ class RouteServiceImplTest {
             when(routeRepository.save(testRoute)).thenReturn(testRoute);
             when(routeMapper.toResponseDto(testRoute)).thenReturn(testResponseDto);
 
-            // when
             RouteResponseDto result = routeService.createRoute(testRouteDto);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getWaypoints()).isNull();
             verify(routeRepository, times(1)).save(testRoute);
         }
     }
-
-    // ==================== UPDATE ROUTE TESTS ====================
 
     @Nested
     @DisplayName("updateRoute() tests")
@@ -207,7 +181,6 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should update route successfully")
         void updateRoute_Success_ShouldReturnUpdatedRoute() {
-            // given
             RouteRequestDto updateDto = new RouteRequestDto();
             updateDto.setStartPoint("Москва");
             updateDto.setEndPoint("Казань");
@@ -235,10 +208,8 @@ class RouteServiceImplTest {
             when(routeRepository.save(any(Route.class))).thenReturn(updatedRoute);
             when(routeMapper.toResponseDto(any(Route.class))).thenReturn(updatedResponse);
 
-            // when
             RouteResponseDto result = routeService.updateRoute(10L, updateDto);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getEndPoint()).isEqualTo("Казань");
             assertThat(result.getDistanceKm()).isEqualTo(820.0);
@@ -248,10 +219,8 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should throw exception when route not found")
         void updateRoute_NotFound_ShouldThrowException() {
-            // given
             when(routeRepository.findById(999L)).thenReturn(Optional.empty());
 
-            // when & then
             assertThatThrownBy(() -> routeService.updateRoute(999L, testRouteDto))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Route not found with id: 999");
@@ -261,7 +230,6 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should update route with null waypoints")
         void updateRoute_WithNullWaypoints_ShouldUpdateSuccessfully() {
-            // given
             RouteRequestDto updateDto = new RouteRequestDto();
             updateDto.setStartPoint("Moscow");
             updateDto.setEndPoint("Kazan");
@@ -271,16 +239,12 @@ class RouteServiceImplTest {
             when(routeRepository.save(any(Route.class))).thenReturn(testRoute);
             when(routeMapper.toResponseDto(any(Route.class))).thenReturn(testResponseDto);
 
-            // when
             RouteResponseDto result = routeService.updateRoute(10L, updateDto);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(testRoute.getWaypoints()).isNull();
         }
     }
-
-    // ==================== DELETE ROUTE TESTS ====================
 
     @Nested
     @DisplayName("deleteRoute() tests")
@@ -289,32 +253,25 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should delete route successfully")
         void deleteRoute_Success_ShouldDeleteRoute() {
-            // given
             when(routeRepository.existsById(10L)).thenReturn(true);
             doNothing().when(routeRepository).deleteById(10L);
 
-            // when
             routeService.deleteRoute(10L);
 
-            // then
             verify(routeRepository, times(1)).deleteById(10L);
         }
 
         @Test
         @DisplayName("Should throw exception when route not found")
         void deleteRoute_NotFound_ShouldThrowException() {
-            // given
             when(routeRepository.existsById(999L)).thenReturn(false);
 
-            // when & then
             assertThatThrownBy(() -> routeService.deleteRoute(999L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Route not found with id: 999");
             verify(routeRepository, never()).deleteById(anyLong());
         }
     }
-
-    // ==================== FIND ROUTES BY START AND END TESTS ====================
 
     @Nested
     @DisplayName("findRoutesByStartAndEnd() tests")
@@ -323,17 +280,14 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should find routes by both start and end points")
         void findRoutesByStartAndEnd_WithBothParams_ShouldReturnFilteredRoutes() {
-            // given
             List<Route> routes = Arrays.asList(testRoute);
             List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto);
             when(routeRepository.findByStartPointAndEndPoint("Москва", "Санкт-Петербург"))
                     .thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
 
-            // when
             List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd("Москва", "Санкт-Петербург");
 
-            // then
             assertThat(result).hasSize(1);
             verify(routeRepository, times(1)).findByStartPointAndEndPoint("Москва", "Санкт-Петербург");
             verify(routeRepository, never()).findByStartPointContainingIgnoreCase(anyString());
@@ -343,17 +297,14 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should find routes by start point only")
         void findRoutesByStartAndEnd_WithStartOnly_ShouldReturnRoutesByStart() {
-            // given
-            List<Route> routes = Arrays.asList(testRoute);
-            List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto);
+            List<Route> routes = Collections.singletonList(testRoute);
+            List<RouteResponseDto> expectedResponse = Collections.singletonList(testResponseDto);
             when(routeRepository.findByStartPointContainingIgnoreCase("Москва"))
                     .thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
 
-            // when
             List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd("Москва", null);
 
-            // then
             assertThat(result).hasSize(1);
             verify(routeRepository, times(1)).findByStartPointContainingIgnoreCase("Москва");
         }
@@ -361,32 +312,26 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should return empty list when startPoint not found")
         void findRoutesByStartAndEnd_StartPointNotFound_ShouldReturnEmpty() {
-            // given
             when(routeRepository.findByStartPointContainingIgnoreCase("NonExistent"))
                     .thenReturn(List.of());
             when(routeMapper.toResponseDtoList(List.of())).thenReturn(List.of());
 
-            // when
             List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd("NonExistent", null);
 
-            // then
             assertThat(result).isEmpty();
         }
 
         @Test
         @DisplayName("Should find routes by end point only")
         void findRoutesByStartAndEnd_WithEndOnly_ShouldReturnRoutesByEnd() {
-            // given
             List<Route> routes = Arrays.asList(testRoute);
             List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto);
             when(routeRepository.findByEndPointContainingIgnoreCase("Санкт-Петербург"))
                     .thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
 
-            // when
             List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd(null, "Санкт-Петербург");
 
-            // then
             assertThat(result).hasSize(1);
             verify(routeRepository, times(1)).findByEndPointContainingIgnoreCase("Санкт-Петербург");
         }
@@ -394,10 +339,8 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should return empty list when no parameters provided")
         void findRoutesByStartAndEnd_NoParams_ShouldReturnEmptyList() {
-            // when
             List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd(null, null);
 
-            // then
             assertThat(result).isEmpty();
             verify(routeRepository, never()).findByStartPointAndEndPoint(anyString(), anyString());
             verify(routeRepository, never()).findByStartPointContainingIgnoreCase(anyString());
@@ -407,32 +350,26 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should return empty list when no routes match")
         void findRoutesByStartAndEnd_NoMatches_ShouldReturnEmptyList() {
-            // given
             when(routeRepository.findByStartPointAndEndPoint("Москва", "Сочи"))
                     .thenReturn(List.of());
             when(routeMapper.toResponseDtoList(List.of())).thenReturn(List.of());
 
-            // when
             List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd("Москва", "Сочи");
 
-            // then
             assertThat(result).isEmpty();
         }
 
         @Test
         @DisplayName("Should be case insensitive when searching by start point")
         void findRoutesByStartAndEnd_CaseInsensitiveStart_ShouldReturnRoutes() {
-            // given
             List<Route> routes = Arrays.asList(testRoute);
             List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto);
             when(routeRepository.findByStartPointContainingIgnoreCase("москва"))
                     .thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
 
-            // when
             List<RouteResponseDto> result = routeService.findRoutesByStartAndEnd("москва", null);
 
-            // then
             assertThat(result).hasSize(1);
             verify(routeRepository, times(1)).findByStartPointContainingIgnoreCase("москва");
         }
