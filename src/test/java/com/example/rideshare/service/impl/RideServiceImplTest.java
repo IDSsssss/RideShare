@@ -1296,6 +1296,39 @@ class RideServiceImplTest {
             assertThat(secondResult.getContent()).hasSize(2);
             verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
         }
+
+        // Добавьте этот тест в класс SearchRidesCacheTests
+
+        @Test
+        @DisplayName("Should use cache when conditions are met (both true)")
+        void searchRides_ShouldUseCache_WhenConditionsAreMet() {
+            // given
+            // Настраиваем моки для ПЕРВОГО вызова (кэш пуст)
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // 1. Выполняем ПЕРВЫЙ поиск. Кэш пуст -> данные из БД -> кэш заполняется.
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем счётчики вызовов моков, чтобы проверить, что они не вызываются
+            // Обратите внимание: мы НЕ удаляем поведение моков (doNothing), просто сбрасываем счётчики.
+            // Но если мы используем reset, то теряем заглушку rideRepository.searchRides,
+            // поэтому не будем использовать reset.
+
+            // 2. Выполняем ВТОРОЙ поиск с теми же параметрами.
+            // Ожидаем: кэш уже содержит данные, modificationCount не изменился.
+            Page<RideResponseDto> secondResult = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(secondResult).isNotNull();
+            assertThat(secondResult.getContent()).hasSize(mockRides.size());
+
+            // Убеждаемся, что репозиторий НЕ БЫЛ вызван (кэш использован)
+            // Для этого нужно убедиться, что метод searchRidesWithFilters был вызван только один раз.
+            // Так как первый вызов был, а второй - нет.
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
     }
 
     // ==================== CACHE TESTS ====================
