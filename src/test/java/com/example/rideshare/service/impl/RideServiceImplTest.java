@@ -371,8 +371,41 @@ class RideServiceImplTest {
     @Nested
     @DisplayName("deleteRide() tests")
     class DeleteRideTests {
+
         @Test
-        @DisplayName("Should delete ride successfully")
+        @DisplayName("Should throw exception when id is null")
+        void deleteRide_NullId_ShouldThrowException() {
+            assertThatThrownBy(() -> rideService.deleteRide(null))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Ride ID cannot be null");
+            verify(rideRepository, never()).delete(any(Ride.class));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ride not found")
+        void deleteRide_RideNotFound_ShouldThrowException() {
+            when(rideRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> rideService.deleteRide(999L))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Ride not found with id: 999");
+            verify(rideRepository, never()).delete(any(Ride.class));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ride has existing bookings")
+        void deleteRide_WithBookings_ShouldThrowException() {
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(2);
+
+            assertThatThrownBy(() -> rideService.deleteRide(100L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Cannot delete ride with existing bookings");
+            verify(rideRepository, never()).delete(any(Ride.class));
+        }
+
+        @Test
+        @DisplayName("Should delete ride successfully when no bookings")
         void deleteRide_Success_ShouldDeleteRide() {
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(0);
@@ -384,16 +417,31 @@ class RideServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when ride has existing bookings")
-        void deleteRide_WithBookings_ShouldThrowException() {
+        @DisplayName("Should delete ride successfully when bookedSeats is null")
+        void deleteRide_WhenBookedSeatsNull_ShouldDeleteSuccessfully() {
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(2);
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(null);
+            doNothing().when(rideRepository).delete(testRide);
 
-            assertThatThrownBy(() -> rideService.deleteRide(100L))
-                    .isInstanceOf(BusinessException.class);
+            rideService.deleteRide(100L);
+
+            verify(rideRepository, times(1)).delete(testRide);
+        }
+
+        @Test
+        @DisplayName("Should invalidate cache after deletion")
+        void deleteRide_ShouldInvalidateCache() {
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(0);
+            doNothing().when(rideRepository).delete(testRide);
+
+            RideServiceImpl spyService = spy(rideService);
+
+            spyService.deleteRide(100L);
+
+            verify(spyService, times(1)).invalidateCache();
         }
     }
-
     // ==================== UPDATE RIDE STATUS TESTS ====================
 
     @Nested
