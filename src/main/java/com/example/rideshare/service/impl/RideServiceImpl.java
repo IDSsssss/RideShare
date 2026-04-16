@@ -268,13 +268,13 @@ public class RideServiceImpl implements RideService {
                 .map(ride -> ride.getRoute().getStartPoint() + "|" + ride.getRoute().getEndPoint())
                 .collect(Collectors.toSet());
 
-        Map<String, Route> routesByKey = routeRepository.findAll().stream()
-                .filter(r -> routeKeys.contains(r.getStartPoint() + "|" + r.getEndPoint()))
-                .collect(Collectors.toMap(
-                        r -> r.getStartPoint() + "|" + r.getEndPoint(),
-                        Function.identity(),
-                        (existing, replacement) -> existing
-                ));
+        Map<String, Route> routesByKey = new HashMap<>();
+        for (Route route : routeRepository.findAll()) {
+            String key = route.getStartPoint() + "|" + route.getEndPoint();
+            if (routeKeys.contains(key) && !routesByKey.containsKey(key)) {
+                routesByKey.put(key, route);
+            }
+        }
 
         List<RideResponseDto> results = new ArrayList<>();
 
