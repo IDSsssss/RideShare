@@ -662,6 +662,136 @@ class RideServiceImplTest {
     @Nested
     @DisplayName("searchRides() tests")
     class SearchRidesTests {
+
+        @Test
+        @DisplayName("Should return paged content when start < cachedData.size()")
+        void searchRides_WhenStartLessThanCachedSize_ShouldReturnSubList() {
+            // given
+            Pageable pageable = PageRequest.of(0, 2);
+            searchRequest.setPageable(pageable);
+
+            List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(manyRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняет кэш (сохраняются ВСЕ 4 элемента)
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when - второй вызов, page 0, size 2 (start=0 < 4)
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should return empty list when start >= cachedData.size()")
+        void searchRides_WhenStartGreaterThanOrEqualCachedSize_ShouldReturnEmptyList() {
+            // given
+            Pageable pageable = PageRequest.of(10, 2); // start = 20
+            searchRequest.setPageable(pageable);
+
+            List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(manyRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняет кэш (сохраняются ВСЕ 4 элемента)
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when - второй вызов, page 10 (start=20 >= 4)
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEmpty();
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should return remaining elements when end exceeds cachedData.size()")
+        void searchRides_WhenEndExceedsCachedSize_ShouldReturnRemainingElements() {
+            // given
+            Pageable pageable = PageRequest.of(1, 3); // start=3, end=6
+            searchRequest.setPageable(pageable);
+
+            List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide, testRide);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(manyRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняет кэш (сохраняются ВСЕ 5 элементов)
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when - второй вызов
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2); // элементы с 3 по 4 (2 элемента)
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should work correctly with page size 1")
+        void searchRides_WithPageSizeOne_ShouldReturnSingleElement() {
+            // given
+            Pageable pageable = PageRequest.of(0, 1);
+            searchRequest.setPageable(pageable);
+
+            List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(manyRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняет кэш
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should handle empty cached data correctly")
+        void searchRides_WithEmptyCachedData_ShouldReturnEmptyPage() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(List.of());
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+        }
+
         @Test
         @DisplayName("Should search with JPQL")
         void searchRides_JPQL_ShouldSearchFromDatabase() {
@@ -745,6 +875,227 @@ class RideServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
             verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("searchRides() cache tests")
+    class SearchRidesCacheTests {
+
+        private RideSearchRequest searchRequest;
+        private Pageable pageable;
+        private List<Ride> mockRides;
+
+        @BeforeEach
+        void setUp() {
+            pageable = PageRequest.of(0, 10);
+
+            mockRides = Arrays.asList(testRide, testRide);
+
+            searchRequest = new RideSearchRequest();
+            searchRequest.setStartPoint("Москва");
+            searchRequest.setEndPoint("СПб");
+            searchRequest.setPageable(pageable);
+            searchRequest.setUseNative(false);
+        }
+
+        @Test
+        @DisplayName("Should return cached data when cache hit")
+        void searchRides_CacheHit_WhenModificationCountUnchangedAndKeyExists() {
+            // given - первый вызов заполняет кэш
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняем кэш
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки для второго вызова
+            reset(rideRepository, rideMapper);
+
+            // Второй вызов — должен взять из кэша
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            // Репозиторий не должен вызываться при cache hit
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should NOT use cache when modification count changed")
+        void searchRides_CacheMiss_WhenModificationCountChanged() {
+            // given - первый вызов заполняет кэш
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняем кэш
+            rideService.searchRides(searchRequest);
+
+            // Инвалидируем кэш (изменяет modificationCount)
+            rideService.invalidateCache();
+
+            // Сбрасываем моки и настраиваем для второго вызова
+            reset(rideRepository, rideMapper);
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            // Репозиторий должен быть вызван снова (cache miss)
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should NOT use cache when key does not exist")
+        void searchRides_CacheMiss_WhenKeyNotExists() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // when (первый вызов, кэш пуст)
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should use cache for different page of same filters")
+        void searchRides_CacheHit_DifferentPage() throws Exception {
+            // given - первый запрос page 0
+            Pageable pageable0 = PageRequest.of(0, 2);
+            searchRequest.setPageable(pageable0);
+
+            List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide);
+            List<RideResponseDto> manyResponses = Arrays.asList(
+                    testResponseDto, testResponseDto, testResponseDto, testResponseDto);
+
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(manyRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняем кэш (сохраняются ВСЕ 4 элемента)
+            Page<RideResponseDto> firstPage = rideService.searchRides(searchRequest);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // Второй вызов — page 1
+            Pageable pageable1 = PageRequest.of(1, 2);
+            searchRequest.setPageable(pageable1);
+
+            // when
+            Page<RideResponseDto> secondPage = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(secondPage).isNotNull();
+            // Репозиторий НЕ вызывается — данные берутся из кэша
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should return cached data when cache hit occurs")
+        void searchRides_CacheHit_ShouldReturnCachedData() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов
+            Page<RideResponseDto> firstResult = rideService.searchRides(searchRequest);
+
+            // Проверяем, что кэш содержит ключ
+            Map<String, Object> stats = rideService.getCacheStats();
+            assertThat((Integer) stats.get("cacheSize")).isEqualTo(1);
+
+            // Сбрасываем моки
+            reset(rideRepository, rideMapper);
+
+            // Второй вызов
+            Page<RideResponseDto> secondResult = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(secondResult.getContent()).hasSize(2);
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("invalidateCache() should clear cache and increment modification count")
+        void invalidateCache_ShouldClearCache() {
+            // given
+            // Заполняем кэш
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(List.of(testRide));
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            rideService.searchRides(searchRequest);
+
+            Map<String, Object> statsBefore = rideService.getCacheStats();
+
+            // when
+            rideService.invalidateCache();
+
+            // then
+            Map<String, Object> statsAfter = rideService.getCacheStats();
+            assertThat((Integer) statsAfter.get("cacheSize")).isZero();
+            assertThat((Long) statsAfter.get("modificationCount"))
+                    .isGreaterThan((Long) statsBefore.get("modificationCount"));
+        }
+
+        @Test
+        @DisplayName("Should use cache when conditions are met (both true)")
+        void searchRides_ShouldUseCache_WhenConditionsMet() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняет кэш
+            rideService.searchRides(searchRequest);
+
+            // Сбрасываем счётчики
+            reset(rideRepository, rideMapper);
+
+            // when — второй вызов (должен взять из кэша)
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            // Репозиторий НЕ вызывается при cache hit
+            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should use cache on second call - COVERS THE LINE")
+        void searchRides_SecondCall_UsesCache() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов — заполняем кэш
+            rideService.searchRides(searchRequest);
+
+            // Проверяем что репозиторий был вызван 1 раз
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+
+            // when — второй вызов (должен взять из кэша)
+            Page<RideResponseDto> secondResult = rideService.searchRides(searchRequest);
+
+            // then — репозиторий всё ещё был вызван только 1 раз (не 2)
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            assertThat(secondResult.getContent()).hasSize(2);
         }
     }
 }
