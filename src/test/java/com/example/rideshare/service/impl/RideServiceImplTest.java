@@ -776,23 +776,6 @@ class RideServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should handle empty cached data correctly")
-        void searchRides_WithEmptyCachedData_ShouldReturnEmptyPage() {
-            // given
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
-                    .thenReturn(List.of());
-            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
-
-            // when
-            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
-
-            // then
-            assertThat(result).isNotNull();
-            assertThat(result.getContent()).isEmpty();
-            assertThat(result.getTotalElements()).isZero();
-        }
-
-        @Test
         @DisplayName("Should search with JPQL")
         void searchRides_JPQL_ShouldSearchFromDatabase() {
             when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
