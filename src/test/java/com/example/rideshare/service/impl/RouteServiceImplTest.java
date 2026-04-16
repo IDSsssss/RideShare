@@ -280,8 +280,8 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should find routes by both start and end points")
         void findRoutesByStartAndEnd_WithBothParams_ShouldReturnFilteredRoutes() {
-            List<Route> routes = Arrays.asList(testRoute);
-            List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto);
+            List<Route> routes = Collections.singletonList(testRoute);
+            List<RouteResponseDto> expectedResponse = Collections.singletonList(testResponseDto);
             when(routeRepository.findByStartPointAndEndPoint("Москва", "Санкт-Петербург"))
                     .thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
@@ -324,8 +324,8 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should find routes by end point only")
         void findRoutesByStartAndEnd_WithEndOnly_ShouldReturnRoutesByEnd() {
-            List<Route> routes = Arrays.asList(testRoute);
-            List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto);
+            List<Route> routes = Collections.singletonList(testRoute);
+            List<RouteResponseDto> expectedResponse = Collections.singletonList(testResponseDto);
             when(routeRepository.findByEndPointContainingIgnoreCase("Санкт-Петербург"))
                     .thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
@@ -362,8 +362,8 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should be case insensitive when searching by start point")
         void findRoutesByStartAndEnd_CaseInsensitiveStart_ShouldReturnRoutes() {
-            List<Route> routes = Arrays.asList(testRoute);
-            List<RouteResponseDto> expectedResponse = Arrays.asList(testResponseDto);
+            List<Route> routes = Collections.singletonList(testRoute);
+            List<RouteResponseDto> expectedResponse = Collections.singletonList(testResponseDto);
             when(routeRepository.findByStartPointContainingIgnoreCase("москва"))
                     .thenReturn(routes);
             when(routeMapper.toResponseDtoList(routes)).thenReturn(expectedResponse);
