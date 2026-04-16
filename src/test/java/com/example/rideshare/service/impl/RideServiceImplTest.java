@@ -1329,6 +1329,52 @@ class RideServiceImplTest {
             // Так как первый вызов был, а второй - нет.
             verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
         }
+
+        @Test
+        @DisplayName("Should use cache on second call - COVERS THE LINE")
+        void searchRides_SecondCall_UsesCache() {
+            // given
+            // Первый вызов — заполняем кэш
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Вызываем первый раз — данные сохраняются в кэш
+            Page<RideResponseDto> firstResult = rideService.searchRides(searchRequest);
+
+            // ❌ НЕ ИСПОЛЬЗУЙ reset()! Он удаляет заглушки!
+            // reset(rideRepository, rideMapper);
+
+            // ✅ Вместо reset, проверяем что репозиторий был вызван 1 раз
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+
+            // when — второй вызов (должен взять из кэша)
+            Page<RideResponseDto> secondResult = rideService.searchRides(searchRequest);
+
+            // then — репозиторий всё ещё был вызван только 1 раз (не 2)
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            assertThat(secondResult.getContent()).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("FORCE COVERAGE - cache hit line")
+        void forceCacheHitCoverage() {
+            // given
+            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockRides);
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            // Первый вызов
+            rideService.searchRides(searchRequest);
+
+            // Второй вызов — должен быть cache hit
+            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
+
+            // then
+            assertThat(result).isNotNull();
+            // Проверяем, что searchRides вызван ТОЛЬКО ОДИН раз (при первом вызове)
+            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+        }
     }
 
     // ==================== CACHE TESTS ====================
