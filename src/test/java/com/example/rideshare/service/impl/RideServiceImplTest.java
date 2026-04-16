@@ -18,6 +18,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -504,32 +507,17 @@ class RideServiceImplTest {
             verify(rideRepository, never()).findById(any());
         }
 
-        @Test
-        @DisplayName("Should throw exception when status is null")
-        void updateRideStatus_NullStatus_ShouldThrowException() {
-            assertThatThrownBy(() -> rideService.updateRideStatus(100L, null))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Status cannot be null or empty");
-            verify(rideRepository, never()).findById(any());
-            verify(rideRepository, never()).save(any(Ride.class));
-        }
+        @ParameterizedTest
+        @NullAndEmptySource
+        @ValueSource(strings = {"   ", "\t", "\n"})
+        @DisplayName("Should throw exception when status is null, empty, or blank")
+        void updateRideStatus_InvalidStatus_ShouldThrowException(String status) {
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
 
-        @Test
-        @DisplayName("Should throw exception when status is empty")
-        void updateRideStatus_EmptyStatus_ShouldThrowException() {
-            assertThatThrownBy(() -> rideService.updateRideStatus(100L, ""))
+            assertThatThrownBy(() -> rideService.updateRideStatus(100L, status))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Status cannot be null or empty");
-            verify(rideRepository, never()).findById(any());
-            verify(rideRepository, never()).save(any(Ride.class));
-        }
 
-        @Test
-        @DisplayName("Should throw exception when status is blank")
-        void updateRideStatus_BlankStatus_ShouldThrowException() {
-            assertThatThrownBy(() -> rideService.updateRideStatus(100L, "   "))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Status cannot be null or empty");
             verify(rideRepository, never()).findById(any());
             verify(rideRepository, never()).save(any(Ride.class));
         }
@@ -547,7 +535,7 @@ class RideServiceImplTest {
 
         @Test
         @DisplayName("Should throw exception when status is invalid")
-        void updateRideStatus_InvalidStatus_ShouldThrowException() {
+        void updateRideStatus_InvalidStatusValue_ShouldThrowException() {
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
 
             assertThatThrownBy(() -> rideService.updateRideStatus(100L, "INVALID_STATUS"))
