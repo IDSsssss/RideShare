@@ -648,12 +648,42 @@ class RideServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should capture transaction status in error message")
+        void createRidesBulk_Error_ShouldCaptureTransactionStatus() {
+            // given
+            RideRequestDto errorRide = new RideRequestDto();
+            errorRide.setPrice(15000.0);
+            errorRide.setDepartureTime(LocalDateTime.now().plusDays(7));
+            errorRide.setAvailableSeats(4);
+
+            RouteRequestDto routeDto = new RouteRequestDto();
+            routeDto.setStartPoint("Москва");
+            routeDto.setEndPoint("СПб");
+            errorRide.setRoute(routeDto);
+
+            BulkRideRequestDto bulkRequest = new BulkRideRequestDto(1L, List.of(errorRide));
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
+
+            // when & then
+            assertThatThrownBy(() -> rideService.createRidesBulk(bulkRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException ex = (BusinessException) e;
+                        assertThat(ex.getMessage()).contains("Transaction active:");
+                    });
+        }
+
+        @Test
         @DisplayName("Should throw exception when driver not found")
         void createRidesBulk_DriverNotFound_ShouldThrowException() {
+            // given
             when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
+            // when & then
             assertThatThrownBy(() -> rideService.createRidesBulk(testBulkRequest))
-                    .isInstanceOf(ResourceNotFoundException.class);
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Driver not found");
         }
 
         @Test
