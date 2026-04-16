@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -58,8 +57,6 @@ public class RideServiceImpl implements RideService {
 
     private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
-    private static final String DRIVER_ID_NULL = "Driver ID cannot be null";
-    private static final String DRIVER_NOT_FOUND = "Driver not found with id: ";
     private static final String TIME_IN_FUTURE = "Departure time must be in the future";
     private static final String CANNOT_DELETE = "Cannot delete ride with existing bookings";
     private static final String CANNOT_CANCEL = "Cannot cancel ride with existing bookings";
