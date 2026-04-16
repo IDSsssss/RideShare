@@ -23,12 +23,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.anyLong;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ReviewService Unit Tests")
@@ -98,8 +107,6 @@ class ReviewServiceImplTest {
         testResponse.setRating(5);
         testResponse.setComment("Great ride!");
     }
-
-    // ==================== CREATE REVIEW TESTS ====================
 
     @Nested
     @DisplayName("createReview() tests")
@@ -213,8 +220,6 @@ class ReviewServiceImplTest {
         }
     }
 
-    // ==================== GET REVIEWS BY RIDE TESTS ====================
-
     @Nested
     @DisplayName("getReviewsByRide() tests")
     class GetReviewsByRideTests {
@@ -253,8 +258,6 @@ class ReviewServiceImplTest {
             assertThat(result).isEmpty();
         }
     }
-
-    // ==================== GET REVIEWS BY USER TESTS ====================
 
     @Nested
     @DisplayName("getReviewsByUser() tests")
@@ -295,8 +298,6 @@ class ReviewServiceImplTest {
         }
     }
 
-    // ==================== GET AVERAGE RATING TESTS ====================
-
     @Nested
     @DisplayName("getAverageRatingForDriver() tests")
     class GetAverageRatingForDriverTests {
@@ -321,8 +322,6 @@ class ReviewServiceImplTest {
             assertThat(result).isEqualTo(0.0);
         }
     }
-
-    // ==================== DELETE REVIEW TESTS ====================
 
     @Nested
     @DisplayName("deleteReview() tests")
@@ -350,8 +349,6 @@ class ReviewServiceImplTest {
             verify(reviewRepository, never()).deleteById(anyLong());
         }
     }
-
-    // ==================== UPDATE DRIVER RATING TESTS ====================
 
     @Nested
     @DisplayName("updateDriverRating() tests (private method verification)")

@@ -33,8 +33,15 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.reset;
+
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RideService Unit Tests")
@@ -121,8 +128,6 @@ class RideServiceImplTest {
         searchRequest.setUseNative(false);
     }
 
-    // ==================== GET ALL RIDES TESTS ====================
-
     @Nested
     @DisplayName("getAllRides() tests")
     class GetAllRidesTests {
@@ -139,8 +144,6 @@ class RideServiceImplTest {
             verify(rideRepository, times(1)).findAllWithDetailsViaEntityGraph();
         }
     }
-
-    // ==================== GET RIDE BY ID TESTS ====================
 
     @Nested
     @DisplayName("getRideById() tests")
@@ -175,8 +178,6 @@ class RideServiceImplTest {
                     .hasMessageContaining("Ride not found with id: 999");
         }
     }
-
-    // ==================== UPDATE RIDE TESTS ====================
 
     @Nested
     @DisplayName("updateRide() tests")
@@ -369,8 +370,6 @@ class RideServiceImplTest {
         }
     }
 
-    // ==================== DELETE RIDE TESTS ====================
-
     @Nested
     @DisplayName("deleteRide() tests")
     class DeleteRideTests {
@@ -445,7 +444,6 @@ class RideServiceImplTest {
             verify(spyService, times(1)).invalidateCache();
         }
     }
-    // ==================== UPDATE RIDE STATUS TESTS ====================
 
     @Nested
     @DisplayName("updateRideStatus() tests")
@@ -570,7 +568,6 @@ class RideServiceImplTest {
             verify(rideRepository, times(1)).save(testRide);
         }
     }
-    // ==================== BULK CREATE RIDES TESTS ====================
 
     @Nested
     @DisplayName("createRidesBulk() tests")
@@ -646,7 +643,6 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should throw BusinessException when price > 10000 (demo error)")
         void createRidesBulk_PriceTooHigh_ShouldThrowException() {
-            // given
             RideRequestDto highPriceRide = new RideRequestDto();
             highPriceRide.setPrice(15000.0);
             highPriceRide.setDepartureTime(LocalDateTime.now().plusDays(7));
@@ -661,7 +657,6 @@ class RideServiceImplTest {
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
 
-            // when & then
             assertThatThrownBy(() -> rideService.createRidesBulk(bulkRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("DEMO ERROR");
@@ -670,7 +665,6 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should handle duplicate routes in repository")
         void createRidesBulk_DuplicateRoutes_ShouldUseMergeFunction() {
-            // given
             Route route1 = new Route();
             route1.setId(10L);
             route1.setStartPoint("Москва");
@@ -689,17 +683,13 @@ class RideServiceImplTest {
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
-            // when
             List<RideResponseDto> result = rideService.createRidesBulk(testBulkRequest);
 
-            // then
             assertThat(result).hasSize(2);
-            // Проверяем, что routesByKey содержит только первый маршрут (id=10)
             verify(rideRepository, times(2)).save(any(Ride.class));
         }
     }
 
-    // ==================== SEARCH RIDES TESTS ====================
 
     @Nested
     @DisplayName("searchRides() tests")
@@ -708,7 +698,6 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should return paged content when start < cachedData.size()")
         void searchRides_WhenStartLessThanCachedSize_ShouldReturnSubList() {
-            // given
             Pageable pageable = PageRequest.of(0, 2);
             searchRequest.setPageable(pageable);
 
@@ -718,16 +707,12 @@ class RideServiceImplTest {
                     .thenReturn(manyRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
-            // Первый вызов — заполняет кэш (сохраняются ВСЕ 4 элемента)
             rideService.searchRides(searchRequest);
 
-            // Сбрасываем моки
             reset(rideRepository, rideMapper);
 
-            // when - второй вызов, page 0, size 2 (start=0 < 4)
             Page<RideResponseDto> result = rideService.searchRides(searchRequest);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
             verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
@@ -736,7 +721,6 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should return empty list when start >= cachedData.size()")
         void searchRides_WhenStartGreaterThanOrEqualCachedSize_ShouldReturnEmptyList() {
-            // given
             Pageable pageable = PageRequest.of(10, 2); // start = 20
             searchRequest.setPageable(pageable);
 
@@ -890,12 +874,11 @@ class RideServiceImplTest {
     class SearchRidesCacheTests {
 
         private RideSearchRequest searchRequest;
-        private Pageable pageable;
         private List<Ride> mockRides;
 
         @BeforeEach
         void setUp() {
-            pageable = PageRequest.of(0, 10);
+            Pageable pageable = PageRequest.of(0, 10);
 
             mockRides = Arrays.asList(testRide, testRide);
 
