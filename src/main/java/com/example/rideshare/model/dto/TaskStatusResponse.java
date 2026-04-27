@@ -32,4 +32,6 @@ public record TaskStatusResponse(
 
         @Schema(description = "List of individual booking errors")
         List<String> errors
-) {}
+) {
+
+}

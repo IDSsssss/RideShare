@@ -84,16 +84,18 @@ public class AsyncBookingServiceImpl implements AsyncBookingService {
         Ride ride = rideRepository.findById(request.getRideId())
                 .orElseThrow(() -> new RuntimeException("Ride not found with id: " + request.getRideId()));
 
-        User passenger = userRepository.findById(request.getPassengerId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getPassengerId()));
-
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(request.getRideId());
-        if (bookedSeats == null) bookedSeats = 0;
+        if (bookedSeats == null) {
+            bookedSeats = 0;
+        }
 
         if (bookedSeats + request.getSeats() > ride.getAvailableSeats()) {
-            throw new RuntimeException("Not enough seats. Requested: " + request.getSeats() +
-                    ", Available: " + (ride.getAvailableSeats() - bookedSeats));
+            throw new RuntimeException("Not enough seats. Requested: " + request.getSeats()
+                    + ", Available: " + (ride.getAvailableSeats() - bookedSeats));
         }
+
+        User passenger = userRepository.findById(request.getPassengerId())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getPassengerId()));
 
         Booking booking = new Booking();
         booking.setRide(ride);

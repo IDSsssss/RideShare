@@ -68,7 +68,9 @@ public class BookingTaskTracker {
 
     public TaskStatusResponse toResponse(String taskId) {
         TaskStatus status = tasks.get(taskId);
-        if (status == null) return null;
+        if (status == null) {
+            return null;
+        }
 
         return new TaskStatusResponse(
                 taskId,

@@ -39,7 +39,9 @@ public class CounterService {
         safeCounter.incrementAndGet();
     }
 
-    public int getSafeCounter() { return safeCounter.get(); }
+    public int getSafeCounter() {
+        return safeCounter.get();
+    }
 
     public void reset() {
         unsafeCounter = 0;
@@ -54,7 +56,7 @@ public class CounterService {
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
-        long startTime = System.currentTimeMillis();
+
 
         for (int i = 0; i < threadCount; i++) {
             executor.submit(() -> {
@@ -92,13 +94,15 @@ public class CounterService {
         );
     }
 
+    long startTime = System.currentTimeMillis();
+
     public RaceConditionResult demonstrateSolution(int threadCount, int incrementsPerThread) {
         reset();
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
-        long startTime = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
 
         for (int i = 0; i < threadCount; i++) {
             executor.submit(() -> {
