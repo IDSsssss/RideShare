@@ -13,6 +13,8 @@ import com.example.rideshare.service.AsyncBookingService;
 import com.example.rideshare.utils.BookingTaskTracker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,12 +31,18 @@ public class AsyncBookingServiceImpl implements AsyncBookingService {
     private final UserRepository userRepository;
     private final BookingTaskTracker taskTracker;
 
+    // Самовнедрение для вызова асинхронных методов
+    @Lazy
+    @Autowired
+    private AsyncBookingServiceImpl self;
+
     @Override
     public String processBookingsAsync(List<BookingRequestDto> bookingRequests) {
         String taskId = taskTracker.generateAndCreateTask(bookingRequests.size());
         log.info("✅ Generated taskId: {} for {} bookings", taskId, bookingRequests.size());
 
-        doAsyncProcessing(taskId, bookingRequests);
+        // Используем self вместо this
+        self.doAsyncProcessing(taskId, bookingRequests);
 
         return taskId;
     }
@@ -61,7 +69,7 @@ public class AsyncBookingServiceImpl implements AsyncBookingService {
                 String error = String.format("Ride %d, User %d: %s",
                         request.getRideId(), request.getPassengerId(), e.getMessage());
                 log.error("❌ Failed: {}", error);
-                taskTracker.addError(taskId, error);  // Добавляем ошибку в список
+                taskTracker.addError(taskId, error);
             }
         }
 
