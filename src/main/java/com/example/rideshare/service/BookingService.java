@@ -2,7 +2,6 @@ package com.example.rideshare.service;
 
 import com.example.rideshare.model.dto.BookingRequestDto;
 import com.example.rideshare.model.dto.BookingResponseDto;
-import com.example.rideshare.model.entity.Booking;
 
 import java.util.List;
 

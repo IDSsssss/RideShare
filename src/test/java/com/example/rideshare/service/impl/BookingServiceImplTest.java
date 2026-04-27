@@ -423,4 +423,190 @@ class BookingServiceImplTest {
             verify(bookingRepository, never()).findByRideId(anyLong());
         }
     }
+
+    @Nested
+    @DisplayName("getAllBookings() tests")
+    class GetAllBookingsTests {
+
+        @Test
+        @DisplayName("Should return all bookings successfully")
+        void getAllBookings_Success_ShouldReturnAllBookings() {
+            List<Booking> bookings = Arrays.asList(testBooking, testBooking, testBooking);
+            List<BookingResponseDto> expectedResponses = Arrays.asList(testResponse, testResponse, testResponse);
+
+            when(bookingRepository.findAll()).thenReturn(bookings);
+            when(bookingMapper.toResponseDtoList(bookings)).thenReturn(expectedResponses);
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).isNotNull();
+            assertThat(result).hasSize(3);
+            assertThat(result).isEqualTo(expectedResponses);
+            verify(bookingRepository, times(1)).findAll();
+            verify(bookingMapper, times(1)).toResponseDtoList(bookings);
+        }
+
+        @Test
+        @DisplayName("Should return empty list when no bookings exist")
+        void getAllBookings_NoBookings_ShouldReturnEmptyList() {
+            List<Booking> emptyBookings = List.of();
+            List<BookingResponseDto> emptyResponse = List.of();
+
+            when(bookingRepository.findAll()).thenReturn(emptyBookings);
+            when(bookingMapper.toResponseDtoList(emptyBookings)).thenReturn(emptyResponse);
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).isNotNull();
+            assertThat(result).isEmpty();
+            verify(bookingRepository, times(1)).findAll();
+            verify(bookingMapper, times(1)).toResponseDtoList(emptyBookings);
+        }
+
+        @Test
+        @DisplayName("Should return single booking when only one exists")
+        void getAllBookings_SingleBooking_ShouldReturnOneBooking() {
+            List<Booking> singleBooking = List.of(testBooking);
+            List<BookingResponseDto> singleResponse = List.of(testResponse);
+
+            when(bookingRepository.findAll()).thenReturn(singleBooking);
+            when(bookingMapper.toResponseDtoList(singleBooking)).thenReturn(singleResponse);
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).isNotNull();
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getId()).isEqualTo(1000L);
+            verify(bookingRepository, times(1)).findAll();
+            verify(bookingMapper, times(1)).toResponseDtoList(singleBooking);
+        }
+
+        @Test
+        @DisplayName("Should handle bookings with different statuses")
+        void getAllBookings_DifferentStatuses_ShouldReturnAll() {
+            Booking confirmedBooking = new Booking();
+            confirmedBooking.setId(2000L);
+            confirmedBooking.setStatus(BookingStatus.CONFIRMED);
+
+            Booking cancelledBooking = new Booking();
+            cancelledBooking.setId(3000L);
+            cancelledBooking.setStatus(BookingStatus.CANCELLED);
+
+            Booking completedBooking = new Booking();
+            completedBooking.setId(4000L);
+            completedBooking.setStatus(BookingStatus.COMPLETED);
+
+            List<Booking> bookings = Arrays.asList(
+                    testBooking, confirmedBooking, cancelledBooking, completedBooking);
+
+            when(bookingRepository.findAll()).thenReturn(bookings);
+            when(bookingMapper.toResponseDtoList(bookings)).thenReturn(
+                    Arrays.asList(testResponse, testResponse, testResponse, testResponse));
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).isNotNull();
+            assertThat(result).hasSize(4);
+            verify(bookingRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should return bookings sorted by ID (default order from DB)")
+        void getAllBookings_ShouldMaintainOrderFromDatabase() {
+            Booking booking1 = new Booking();
+            booking1.setId(1L);
+
+            Booking booking2 = new Booking();
+            booking2.setId(2L);
+
+            Booking booking3 = new Booking();
+            booking3.setId(3L);
+
+            List<Booking> bookings = Arrays.asList(booking1, booking2, booking3);
+
+            when(bookingRepository.findAll()).thenReturn(bookings);
+            when(bookingMapper.toResponseDtoList(bookings)).thenReturn(
+                    Arrays.asList(new BookingResponseDto(), new BookingResponseDto(), new BookingResponseDto()));
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).isNotNull();
+            assertThat(result).hasSize(3);
+            verify(bookingRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should handle null response from mapper gracefully")
+        void getAllBookings_NullMapperResponse_ShouldHandleGracefully() {
+            List<Booking> bookings = Arrays.asList(testBooking, testBooking);
+
+            when(bookingRepository.findAll()).thenReturn(bookings);
+            when(bookingMapper.toResponseDtoList(bookings)).thenReturn(null);
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).isNull();
+            verify(bookingRepository, times(1)).findAll();
+            verify(bookingMapper, times(1)).toResponseDtoList(bookings);
+        }
+
+        @Test
+        @DisplayName("Should call repository.findAll exactly once")
+        void getAllBookings_ShouldCallFindAllExactlyOnce() {
+            List<Booking> bookings = Arrays.asList(testBooking, testBooking);
+
+            when(bookingRepository.findAll()).thenReturn(bookings);
+            when(bookingMapper.toResponseDtoList(bookings)).thenReturn(
+                    Arrays.asList(testResponse, testResponse));
+
+            bookingService.getAllBookings();
+
+            verify(bookingRepository, times(1)).findAll();
+            verify(bookingMapper, times(1)).toResponseDtoList(bookings);
+        }
+
+        @Test
+        @DisplayName("Should handle large number of bookings efficiently")
+        void getAllBookings_LargeDataSet_ShouldHandleEfficiently() {
+            List<Booking> largeBookings = new java.util.ArrayList<>();
+            for (int i = 0; i < 100; i++) {
+                Booking booking = new Booking();
+                booking.setId((long) i);
+                largeBookings.add(booking);
+            }
+
+            when(bookingRepository.findAll()).thenReturn(largeBookings);
+            when(bookingMapper.toResponseDtoList(anyList())).thenReturn(new java.util.ArrayList<>());
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).isNotNull();
+            verify(bookingRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should preserve booking data integrity")
+        void getAllBookings_ShouldPreserveDataIntegrity() {
+            Booking originalBooking = new Booking();
+            originalBooking.setId(1000L);
+            originalBooking.setSeats(3);
+            originalBooking.setStatus(BookingStatus.CONFIRMED);
+
+            BookingResponseDto expectedResponse = new BookingResponseDto();
+            expectedResponse.setId(1000L);
+            expectedResponse.setSeats(3);
+            expectedResponse.setStatus(BookingStatus.CONFIRMED);
+
+            when(bookingRepository.findAll()).thenReturn(List.of(originalBooking));
+            when(bookingMapper.toResponseDtoList(List.of(originalBooking))).thenReturn(List.of(expectedResponse));
+
+            List<BookingResponseDto> result = bookingService.getAllBookings();
+
+            assertThat(result).hasSize(1);
+            BookingResponseDto actual = result.get(0);
+            assertThat(actual.getId()).isEqualTo(1000L);
+            assertThat(actual.getSeats()).isEqualTo(3);
+            assertThat(actual.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        }
+    }
 }
