@@ -431,17 +431,14 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should return all bookings successfully")
         void getAllBookings_Success_ShouldReturnAllBookings() {
-            // given
             List<Booking> bookings = Arrays.asList(testBooking, testBooking, testBooking);
             List<BookingResponseDto> expectedResponses = Arrays.asList(testResponse, testResponse, testResponse);
 
             when(bookingRepository.findAll()).thenReturn(bookings);
             when(bookingMapper.toResponseDtoList(bookings)).thenReturn(expectedResponses);
 
-            // when
             List<BookingResponseDto> result = bookingService.getAllBookings();
 
-            // then
             assertThat(result)
                     .isNotNull()
                     .hasSize(3)
@@ -454,17 +451,14 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should return single booking when only one exists")
         void getAllBookings_SingleBooking_ShouldReturnOneBooking() {
-            // given
             List<Booking> singleBooking = List.of(testBooking);
             List<BookingResponseDto> singleResponse = List.of(testResponse);
 
             when(bookingRepository.findAll()).thenReturn(singleBooking);
             when(bookingMapper.toResponseDtoList(singleBooking)).thenReturn(singleResponse);
 
-            // when
             List<BookingResponseDto> result = bookingService.getAllBookings();
 
-            // then
             assertThat(result)
                     .isNotNull()
                     .hasSize(1);
@@ -478,7 +472,6 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should handle bookings with different statuses")
         void getAllBookings_DifferentStatuses_ShouldReturnAll() {
-            // given
             Booking confirmedBooking = new Booking();
             confirmedBooking.setId(2000L);
             confirmedBooking.setStatus(BookingStatus.CONFIRMED);
@@ -498,10 +491,8 @@ class BookingServiceImplTest {
             when(bookingMapper.toResponseDtoList(bookings)).thenReturn(
                     Arrays.asList(testResponse, testResponse, testResponse, testResponse));
 
-            // when
             List<BookingResponseDto> result = bookingService.getAllBookings();
 
-            // then
             assertThat(result)
                     .isNotNull()
                     .hasSize(4);
@@ -512,7 +503,6 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should return bookings sorted by ID (default order from DB)")
         void getAllBookings_ShouldMaintainOrderFromDatabase() {
-            // given
             Booking booking1 = new Booking();
             booking1.setId(1L);
 
@@ -528,10 +518,8 @@ class BookingServiceImplTest {
             when(bookingMapper.toResponseDtoList(bookings)).thenReturn(
                     Arrays.asList(new BookingResponseDto(), new BookingResponseDto(), new BookingResponseDto()));
 
-            // when
             List<BookingResponseDto> result = bookingService.getAllBookings();
 
-            // then
             assertThat(result)
                     .isNotNull()
                     .hasSize(3);
@@ -542,16 +530,13 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should handle null response from mapper gracefully")
         void getAllBookings_NullMapperResponse_ShouldHandleGracefully() {
-            // given
             List<Booking> bookings = Arrays.asList(testBooking, testBooking);
 
             when(bookingRepository.findAll()).thenReturn(bookings);
             when(bookingMapper.toResponseDtoList(bookings)).thenReturn(null);
 
-            // when
             List<BookingResponseDto> result = bookingService.getAllBookings();
 
-            // then
             assertThat(result).isNull();
 
             verify(bookingRepository, times(1)).findAll();
@@ -561,17 +546,14 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should call repository.findAll exactly once")
         void getAllBookings_ShouldCallFindAllExactlyOnce() {
-            // given
             List<Booking> bookings = Arrays.asList(testBooking, testBooking);
 
             when(bookingRepository.findAll()).thenReturn(bookings);
             when(bookingMapper.toResponseDtoList(bookings)).thenReturn(
                     Arrays.asList(testResponse, testResponse));
 
-            // when
             bookingService.getAllBookings();
 
-            // then
             verify(bookingRepository, times(1)).findAll();
             verify(bookingMapper, times(1)).toResponseDtoList(bookings);
         }
@@ -579,7 +561,6 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should handle large number of bookings efficiently")
         void getAllBookings_LargeDataSet_ShouldHandleEfficiently() {
-            // given
             List<Booking> largeBookings = new java.util.ArrayList<>();
             for (int i = 0; i < 100; i++) {
                 Booking booking = new Booking();
@@ -590,10 +571,8 @@ class BookingServiceImplTest {
             when(bookingRepository.findAll()).thenReturn(largeBookings);
             when(bookingMapper.toResponseDtoList(anyList())).thenReturn(new java.util.ArrayList<>());
 
-            // when
             List<BookingResponseDto> result = bookingService.getAllBookings();
 
-            // then
             assertThat(result).isNotNull();
 
             verify(bookingRepository, times(1)).findAll();
@@ -602,7 +581,6 @@ class BookingServiceImplTest {
         @Test
         @DisplayName("Should preserve booking data integrity")
         void getAllBookings_ShouldPreserveDataIntegrity() {
-            // given
             Booking originalBooking = new Booking();
             originalBooking.setId(1000L);
             originalBooking.setSeats(3);
@@ -616,10 +594,8 @@ class BookingServiceImplTest {
             when(bookingRepository.findAll()).thenReturn(List.of(originalBooking));
             when(bookingMapper.toResponseDtoList(List.of(originalBooking))).thenReturn(List.of(expectedResponse));
 
-            // when
             List<BookingResponseDto> result = bookingService.getAllBookings();
 
-            // then
             assertThat(result)
                     .hasSize(1);
 
