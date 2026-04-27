@@ -62,7 +62,6 @@ public class RideServiceImpl implements RideService {
     private static final String CANNOT_CANCEL = "Cannot cancel ride with existing bookings";
     private static final String INVALID_STATUS = "Invalid status: ";
     private static final String STATUS_IS_NULL = "Status cannot be null or empty";
-
     private static final String STATUS_SCHEDULED = "SCHEDULED";
     private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
     private static final String STATUS_COMPLETED = "COMPLETED";
@@ -254,7 +253,6 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
-    @Transactional
     public List<RideResponseDto> createRidesBulk(BulkRideRequestDto request) {
 
         Long driverId = request.driverId();
