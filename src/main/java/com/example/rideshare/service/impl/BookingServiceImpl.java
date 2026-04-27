@@ -128,6 +128,13 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<BookingResponseDto> getAllBookings() {
+        List<Booking> bookings = bookingRepository.findAll();
+        return bookingMapper.toResponseDtoList(bookings);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<BookingResponseDto> getBookingsByUser(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException(USER_NOT_FOUND + userId);

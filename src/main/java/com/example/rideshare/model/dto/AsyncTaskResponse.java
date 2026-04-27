@@ -5,5 +5,4 @@ public record AsyncTaskResponse(
         String status,
         String message
 ) {
-
 }

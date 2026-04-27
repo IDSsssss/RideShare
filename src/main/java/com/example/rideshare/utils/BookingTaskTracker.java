@@ -40,7 +40,6 @@ public class BookingTaskTracker {
         }
     }
 
-    // Новый метод для добавления ошибки
     public void addError(String taskId, String error) {
         TaskStatus task = tasks.get(taskId);
         if (task != null) {
@@ -81,7 +80,7 @@ public class BookingTaskTracker {
                 status.getStartTime(),
                 status.getEndTime(),
                 status.getErrorMessage(),
-                status.getErrors()  // добавляем список ошибок
+                status.getErrors()
         );
     }
 
@@ -101,7 +100,7 @@ public class BookingTaskTracker {
         @Setter
         @Getter
         private String errorMessage;
-        private final List<String> errors;  // список ошибок
+        private final List<String> errors;
 
         public TaskStatus(int totalCount) {
             this.status = "PENDING";
@@ -115,7 +114,7 @@ public class BookingTaskTracker {
         }
 
         public List<String> getErrors() {
-            return new ArrayList<>(errors);  // возвращаем копию для безопасности
+            return new ArrayList<>(errors);
         }
 
         public double getProgressPercent() {

@@ -20,33 +20,24 @@ public class AsyncBookingExecutionService {
     @Async("bookingExecutor")
     public void doAsyncProcessing(String taskId, List<BookingRequestDto> bookingRequests) {
         taskTracker.updateStatus(taskId, "PROCESSING");
-        log.info("🔄 Started async processing for task {}", taskId);
 
         int successCount = 0;
         int failCount = 0;
 
-        for (int i = 0; i < bookingRequests.size(); i++) {
-            BookingRequestDto request = bookingRequests.get(i);
+        for (BookingRequestDto request : bookingRequests) {
             try {
-                // Вызываем через отдельный сервис - @Transactional сработает!
                 bookingProcessor.processSingleBooking(request);
                 taskTracker.incrementProcessed(taskId);
                 successCount++;
-                log.info("📝 Task {}: processed {}/{} - Ride {} User {} Seats {}",
-                        taskId, i + 1, bookingRequests.size(),
-                        request.getRideId(), request.getPassengerId(), request.getSeats());
             } catch (Exception e) {
                 failCount++;
                 String error = String.format("Ride %d, User %d: %s",
                         request.getRideId(), request.getPassengerId(), e.getMessage());
-                log.error("❌ Failed: {}", error);
                 taskTracker.addError(taskId, error);
             }
         }
 
         if (failCount > 0) {
-            log.warn("⚠️ Task {} completed with {} successes and {} failures",
-                    taskId, successCount, failCount);
             if (successCount == 0) {
                 taskTracker.failTask(taskId, "All bookings failed");
             } else {
@@ -54,8 +45,6 @@ public class AsyncBookingExecutionService {
             }
         } else {
             taskTracker.completeTask(taskId);
-            log.info("✅ Task {} completed successfully. Processed {}/{} bookings",
-                    taskId, successCount, bookingRequests.size());
         }
     }
 }

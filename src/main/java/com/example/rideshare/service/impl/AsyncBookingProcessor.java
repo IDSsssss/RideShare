@@ -26,8 +26,6 @@ public class AsyncBookingProcessor {
 
     @Transactional
     public void processSingleBooking(BookingRequestDto request) {
-        log.info("Processing booking for rideId: {}, passengerId: {}",
-                request.getRideId(), request.getPassengerId());
 
         Ride ride = rideRepository.findById(request.getRideId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + request.getRideId()));
@@ -53,6 +51,5 @@ public class AsyncBookingProcessor {
         booking.setStatus(BookingStatus.CONFIRMED);
 
         bookingRepository.save(booking);
-        log.info("Booking created successfully with id: {}", booking.getId());
     }
 }

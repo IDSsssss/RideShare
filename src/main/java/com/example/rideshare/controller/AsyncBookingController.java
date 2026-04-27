@@ -36,12 +36,7 @@ public class AsyncBookingController {
     public ResponseEntity<AsyncTaskResponse> createBookingsAsync(
             @RequestBody List<BookingRequestDto> bookingRequests
     ) {
-        log.info("📨 Received async booking request for {} bookings", bookingRequests.size());
-
-        // Получаем taskId синхронно
         String taskId = asyncBookingService.processBookingsAsync(bookingRequests);
-
-        log.info("🎯 Returning taskId: {}", taskId);
 
         return ResponseEntity.accepted().body(
                 new AsyncTaskResponse(taskId, "ACCEPTED", "Task queued for processing")
@@ -51,17 +46,12 @@ public class AsyncBookingController {
     @GetMapping("/tasks/{taskId}")
     @Operation(summary = "Get task status", description = "Returns current status of async task")
     public ResponseEntity<TaskStatusResponse> getTaskStatus(@PathVariable String taskId) {
-        log.info("🔍 Checking status for taskId: {}", taskId);
 
         TaskStatusResponse status = asyncBookingService.getTaskStatus(taskId);
 
         if (status == null) {
-            log.warn("⚠️ Task not found: {}", taskId);
             return ResponseEntity.notFound().build();
         }
-
-        log.info("📊 Task {} status: {} ({}/{})", taskId, status.status(),
-                status.processedCount(), status.totalCount());
 
         return ResponseEntity.ok(status);
     }
@@ -72,7 +62,6 @@ public class AsyncBookingController {
             @RequestParam(defaultValue = "50") int threads,
             @RequestParam(defaultValue = "1000") int operations
     ) {
-
         CounterService.RaceConditionResult result = counterService.demonstrateRaceCondition(threads, operations);
 
         return ResponseEntity.ok(result);
@@ -84,7 +73,6 @@ public class AsyncBookingController {
             @RequestParam(defaultValue = "50") int threads,
             @RequestParam(defaultValue = "1000") int operations
     ) {
-
         CounterService.RaceConditionResult result = counterService.demonstrateSolution(threads, operations);
 
         return ResponseEntity.ok(result);

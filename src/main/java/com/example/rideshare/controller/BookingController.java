@@ -27,6 +27,11 @@ public class BookingController extends BaseController {
         return created(bookingService.createBooking(request));
     }
 
+    @GetMapping
+    public ResponseEntity<List<BookingResponseDto>> getAllBookings() {
+        return ok(bookingService.getAllBookings());
+    }
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<BookingResponseDto>> getBookingsByUser(@PathVariable Long userId) {
         return ok(bookingService.getBookingsByUser(userId));

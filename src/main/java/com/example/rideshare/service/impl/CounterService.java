@@ -13,24 +13,19 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class CounterService {
 
-    // НЕ потокобезопасный счётчик (будет race condition)
     @Getter
     private int unsafeCounter = 0;
 
-    // Потокобезопасный счётчик (Atomic)
     private final AtomicInteger safeCounter = new AtomicInteger(0);
 
-    // Потокобезопасный счётчик (synchronized)
     @Getter
     private int synchronizedCounter = 0;
 
-    // Для статистики
     private final AtomicLong totalOperations = new AtomicLong(0);
 
     public void unsafeIncrement() {
         int current = unsafeCounter;
-        int next = current + 1;
-        unsafeCounter = next;
+        unsafeCounter = current + 1;
         totalOperations.incrementAndGet();
     }
 
@@ -55,8 +50,6 @@ public class CounterService {
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
-
-
 
         for (int i = 0; i < threadCount; i++) {
             executor.submit(() -> {
