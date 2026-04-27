@@ -10,6 +10,8 @@ import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.example.rideshare.exception.ResourceNotFoundException;
+import com.example.rideshare.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +30,7 @@ public class AsyncBookingProcessor {
                 request.getRideId(), request.getPassengerId());
 
         Ride ride = rideRepository.findById(request.getRideId())
-                .orElseThrow(() -> new RuntimeException("Ride not found with id: " + request.getRideId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + request.getRideId()));
 
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(request.getRideId());
         if (bookedSeats == null) {
@@ -36,12 +38,12 @@ public class AsyncBookingProcessor {
         }
 
         if (bookedSeats + request.getSeats() > ride.getAvailableSeats()) {
-            throw new RuntimeException("Not enough seats. Requested: " + request.getSeats()
+            throw new BusinessException("Not enough seats. Requested: " + request.getSeats()
                     + ", Available: " + (ride.getAvailableSeats() - bookedSeats));
         }
 
         User passenger = userRepository.findById(request.getPassengerId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getPassengerId()));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + request.getPassengerId()));
 
         Booking booking = new Booking();
         booking.setRide(ride);
