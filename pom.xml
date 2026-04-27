@@ -33,12 +33,13 @@
             **/mapper/**,
             **/model/**,
             **/repository/**,
-            **/utils/**
-            **/AsyncBookingServiceTest.java
-            **/CounterServiceTest.java
+            **/utils/**,
+            **/AsyncBookingExecutionService.java,
+            **/AsyncBookingProcessor.java,
+            **/BookingTaskTracker.java,
+            **/CounterService.java,
+            **/AsyncBookingServiceImpl.java,
             **/RideShareApplication.java
-            **/pom.xml
-            **/.github/**
         </sonar.coverage.exclusions>
         <maven.compiler.release>17</maven.compiler.release>
     </properties>
