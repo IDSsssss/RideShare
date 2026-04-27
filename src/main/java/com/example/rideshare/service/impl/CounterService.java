@@ -16,7 +16,6 @@ public class CounterService {
 
     @Getter
     private int unsafeCounter = 0;
-
     private final AtomicInteger safeCounter = new AtomicInteger(0);
 
     @Getter
