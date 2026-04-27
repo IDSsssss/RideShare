@@ -37,6 +37,8 @@
             **/AsyncBookingServiceTest.java
             **/CounterServiceTest.java
             **/RideShareApplication.java
+            **/pom.xml
+            **/.github/**
         </sonar.coverage.exclusions>
         <maven.compiler.release>17</maven.compiler.release>
     </properties>
