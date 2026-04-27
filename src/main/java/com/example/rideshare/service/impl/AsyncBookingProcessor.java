@@ -43,7 +43,8 @@ public class AsyncBookingProcessor {
         }
 
         User passenger = userRepository.findById(request.getPassengerId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + request.getPassengerId()));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: "
+                        + request.getPassengerId()));
 
         Booking booking = new Booking();
         booking.setRide(ride);
