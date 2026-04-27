@@ -82,14 +82,11 @@ public class CounterService {
             Thread.currentThread().interrupt();
         }
 
-        long endTime = System.currentTimeMillis();
         executor.shutdown();
 
         int expected = threadCount * incrementsPerThread;
         int actual = useSafeCounter ? getSafeCounter() : getUnsafeCounter();
         int lostUpdates = useSafeCounter ? 0 : expected - actual;
-
-        long startTime = System.currentTimeMillis();
 
         return new RaceConditionResult(
                 threadCount,
@@ -97,7 +94,6 @@ public class CounterService {
                 expected,
                 actual,
                 lostUpdates,
-                endTime - startTime,
                 !useSafeCounter && lostUpdates > 0
         );
     }
@@ -108,15 +104,14 @@ public class CounterService {
             int expectedValue,
             int actualValue,
             int lostUpdates,
-            long durationMs,
             boolean hasRaceCondition
     ) {
         public String getSummary() {
             int lostPercent = expectedValue > 0 ? (lostUpdates * 100 / expectedValue) : 0;
             return String.format(
-                    "Threads: %d, Ops/thread: %d, Expected: %d, Actual: %d, Lost: %d (%d%%), Duration: %dms, Race: %s",
+                    "Threads: %d, Ops/thread: %d, Expected: %d, Actual: %d, Lost: %d (%d%%), Race: %s",
                     threadCount, incrementsPerThread, expectedValue, actualValue, lostUpdates,
-                    lostPercent, durationMs, hasRaceCondition ? "YES" : "NO"
+                    lostPercent, hasRaceCondition ? "YES" : "NO"
             );
         }
     }
