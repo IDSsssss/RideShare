@@ -56,7 +56,7 @@ public class AsyncBookingController {
         return ResponseEntity.ok(status);
     }
 
-    @PostMapping("/race-demo/unsafe")
+    @GetMapping("/race-demo/unsafe")
     @Operation(summary = "Demonstrate race condition", description = "Shows race condition with unsafe counter")
     public ResponseEntity<CounterService.RaceConditionResult> demonstrateRaceCondition(
             @RequestParam(defaultValue = "50") int threads,
@@ -67,7 +67,7 @@ public class AsyncBookingController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/race-demo/safe")
+    @GetMapping("/race-demo/safe")
     @Operation(summary = "Demonstrate solution", description = "Shows solution with atomic counter")
     public ResponseEntity<CounterService.RaceConditionResult> demonstrateSolution(
             @RequestParam(defaultValue = "50") int threads,
