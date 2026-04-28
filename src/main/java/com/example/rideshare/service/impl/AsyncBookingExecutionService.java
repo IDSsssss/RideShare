@@ -24,7 +24,9 @@ public class AsyncBookingExecutionService {
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {
-            taskTracker.updateStatus(taskId, "FAILED");
+            Thread.currentThread().interrupt();
+            taskTracker.failTask(taskId, "Task was interrupted");
+            return;
         }
 
         int successCount = 0;
