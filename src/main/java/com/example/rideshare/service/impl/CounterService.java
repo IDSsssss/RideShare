@@ -18,15 +18,11 @@ public class CounterService {
     private int unsafeCounter = 0;
     private final AtomicInteger safeCounter = new AtomicInteger(0);
 
-    private final AtomicLong totalOperations = new AtomicLong(0);
-
     public void unsafeIncrement() {
         unsafeCounter++;
-        totalOperations.incrementAndGet();
     }
 
     public void atomicIncrement() {
-        totalOperations.incrementAndGet();
         safeCounter.incrementAndGet();
     }
 
@@ -37,7 +33,6 @@ public class CounterService {
     public void reset() {
         unsafeCounter = 0;
         safeCounter.set(0);
-        totalOperations.set(0);
     }
 
     public RaceConditionResult demonstrateRaceCondition(int threadCount, int incrementsPerThread) {
