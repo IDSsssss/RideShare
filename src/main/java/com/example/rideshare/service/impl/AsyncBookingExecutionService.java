@@ -21,6 +21,12 @@ public class AsyncBookingExecutionService {
     public void doAsyncProcessing(String taskId, List<BookingRequestDto> bookingRequests) {
         taskTracker.updateStatus(taskId, "PROCESSING");
 
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            taskTracker.updateStatus(taskId, "FAILED");
+        }
+
         int successCount = 0;
         int failCount = 0;
 

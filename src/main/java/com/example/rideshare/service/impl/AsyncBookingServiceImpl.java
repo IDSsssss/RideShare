@@ -21,6 +21,7 @@ public class AsyncBookingServiceImpl implements AsyncBookingService {
     @Override
     public String processBookingsAsync(List<BookingRequestDto> bookingRequests) {
         String taskId = taskTracker.generateAndCreateTask(bookingRequests.size());
+
         asyncExecutionService.doAsyncProcessing(taskId, bookingRequests);
 
         return taskId;
