@@ -22,7 +22,7 @@ public class AsyncBookingExecutionService {
         taskTracker.updateStatus(taskId, "PROCESSING");
 
         try {
-            Thread.sleep(3000);
+            Thread.sleep(10000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             taskTracker.failTask(taskId, "Task was interrupted");
