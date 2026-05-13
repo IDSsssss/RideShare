@@ -1,8 +1,10 @@
 package com.example.rideshare.service.impl;
 
 import com.example.rideshare.exception.BusinessException;
+import com.example.rideshare.exception.ForbiddenException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.ReviewMapper;
+import com.example.rideshare.security.CurrentUserAccessor;
 import com.example.rideshare.model.dto.ReviewRequestDto;
 import com.example.rideshare.model.dto.ReviewResponseDto;
 import com.example.rideshare.model.entity.Booking;
@@ -54,6 +56,9 @@ class ReviewServiceImplTest {
 
     @Mock
     private ReviewMapper reviewMapper;
+
+    @Mock
+    private CurrentUserAccessor currentUserAccessor;
 
     @InjectMocks
     private ReviewServiceImpl reviewService;
@@ -108,6 +113,11 @@ class ReviewServiceImplTest {
         testResponse.setComment("Great ride!");
     }
 
+    private void stubAuthenticatedPassenger() {
+        when(currentUserAccessor.currentUserIdOrNull()).thenReturn(1L);
+        when(currentUserAccessor.isAdmin()).thenReturn(false);
+    }
+
     @Nested
     @DisplayName("createReview() tests")
     class CreateReviewTests {
@@ -115,6 +125,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should create review successfully when user is passenger")
         void createReview_SuccessAsPassenger_ShouldReturnReviewResponse() {
+            stubAuthenticatedPassenger();
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
             when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
@@ -134,6 +145,8 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should create review successfully when user is driver")
         void createReview_SuccessAsDriver_ShouldReturnReviewResponse() {
+            when(currentUserAccessor.currentUserIdOrNull()).thenReturn(10L);
+            when(currentUserAccessor.isAdmin()).thenReturn(false);
             ReviewRequestDto request = new ReviewRequestDto();
             request.setRideId(100L);
             request.setReviewerId(10L);
@@ -158,6 +171,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw exception when ride not found")
         void createReview_RideNotFound_ShouldThrowException() {
+            stubAuthenticatedPassenger();
             when(rideRepository.findById(100L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> reviewService.createReview(testRequest))
@@ -169,6 +183,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw exception when ride is not completed")
         void createReview_RideNotCompleted_ShouldThrowException() {
+            stubAuthenticatedPassenger();
             testRide.setStatus(RideStatus.SCHEDULED);
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
 
@@ -181,6 +196,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw ResourceNotFoundException when reviewer not found in database")
         void createReview_ReviewerNotFound_ShouldThrowResourceNotFoundException() {
+            stubAuthenticatedPassenger();
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -192,6 +208,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw exception when user already reviewed this ride")
         void createReview_AlreadyReviewed_ShouldThrowException() {
+            stubAuthenticatedPassenger();
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(true);
 
@@ -204,8 +221,8 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should throw BusinessException when user is neither passenger nor driver")
         void createReview_NeitherPassengerNorDriver_ShouldThrowBusinessException() {
-            User nonParticipant = new User();
-            nonParticipant.setId(99L);
+            when(currentUserAccessor.currentUserIdOrNull()).thenReturn(99L);
+            when(currentUserAccessor.isAdmin()).thenReturn(false);
 
             ReviewRequestDto request = new ReviewRequestDto();
             request.setRideId(100L);
@@ -217,6 +234,36 @@ class ReviewServiceImplTest {
             assertThatThrownBy(() -> reviewService.createReview(request))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("User was not a participant in this ride");
+        }
+
+        @Test
+        @DisplayName("Should reject unauthenticated caller")
+        void createReview_NoActor_ShouldThrowForbidden() {
+            when(currentUserAccessor.currentUserIdOrNull()).thenReturn(null);
+
+            assertThatThrownBy(() -> reviewService.createReview(testRequest))
+                    .isInstanceOf(ForbiddenException.class);
+        }
+
+        @Test
+        @DisplayName("Admin may set reviewerId to a participant")
+        void createReview_AdminChoosesReviewer_ShouldSucceed() {
+            when(currentUserAccessor.currentUserIdOrNull()).thenReturn(999L);
+            when(currentUserAccessor.isAdmin()).thenReturn(true);
+            testRequest.setReviewerId(1L);
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
+            when(reviewMapper.toEntity(any(ReviewRequestDto.class))).thenReturn(testReview);
+            when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
+            when(reviewMapper.toResponseDto(any(Review.class))).thenReturn(testResponse);
+            when(reviewRepository.getAverageRatingForDriver(10L)).thenReturn(4.8);
+            when(userRepository.findById(10L)).thenReturn(Optional.of(testDriver));
+
+            ReviewResponseDto result = reviewService.createReview(testRequest);
+
+            assertThat(result).isNotNull();
+            verify(reviewRepository, times(1)).save(any(Review.class));
         }
     }
 
@@ -357,6 +404,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should update driver rating when creating review")
         void updateDriverRating_ShouldBeCalledWhenCreatingReview() {
+            stubAuthenticatedPassenger();
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
             when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
@@ -376,6 +424,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should not update driver rating if driver not found")
         void updateDriverRating_DriverNotFound_ShouldNotUpdate() {
+            stubAuthenticatedPassenger();
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
             when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));
@@ -395,6 +444,7 @@ class ReviewServiceImplTest {
         @Test
         @DisplayName("Should set driver rating to 0.0 when average rating is null")
         void updateDriverRating_WhenAvgRatingNull_ShouldSetRatingToZero() {
+            stubAuthenticatedPassenger();
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
             when(reviewRepository.existsByReviewerIdAndRideId(1L, 100L)).thenReturn(false);
             when(userRepository.findById(1L)).thenReturn(Optional.of(testReviewer));

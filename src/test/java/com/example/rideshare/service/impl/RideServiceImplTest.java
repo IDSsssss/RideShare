@@ -1,26 +1,27 @@
 package com.example.rideshare.service.impl;
 
 import com.example.rideshare.exception.BusinessException;
+import com.example.rideshare.exception.ConflictException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.RideMapper;
 import com.example.rideshare.mapper.RouteMapper;
 import com.example.rideshare.model.dto.*;
+import com.example.rideshare.model.entity.Booking;
 import com.example.rideshare.model.entity.Ride;
 import com.example.rideshare.model.entity.Route;
 import com.example.rideshare.model.entity.User;
+import com.example.rideshare.model.enums.BookingStatus;
 import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.RouteRepository;
 import com.example.rideshare.repository.UserRepository;
+import com.example.rideshare.security.CurrentUserAccessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +34,7 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.never;
@@ -41,6 +43,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.reset;
+import static org.mockito.ArgumentMatchers.eq;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -64,6 +67,9 @@ class RideServiceImplTest {
 
     @Mock
     private RouteMapper routeMapper;
+
+    @Mock
+    private CurrentUserAccessor currentUserAccessor;
 
     @InjectMocks
     private RideServiceImpl rideService;
@@ -126,6 +132,9 @@ class RideServiceImplTest {
         searchRequest.setEndPoint("СПб");
         searchRequest.setPageable(PageRequest.of(0, 10));
         searchRequest.setUseNative(false);
+
+        lenient().when(currentUserAccessor.isAdmin()).thenReturn(true);
+        lenient().when(currentUserAccessor.currentUserIdOrNull()).thenReturn(1L);
     }
 
     @Nested
@@ -228,7 +237,7 @@ class RideServiceImplTest {
 
             assertThatThrownBy(() -> rideService.updateRide(100L, pastTimeRequest))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Departure time must be in the future");
+                    .hasMessageContaining("будущем");
         }
 
         @Test
@@ -446,8 +455,8 @@ class RideServiceImplTest {
     }
 
     @Nested
-    @DisplayName("updateRideStatus() tests")
-    class UpdateRideStatusTests {
+    @DisplayName("cancelRide() tests")
+    class CancelRideTests {
 
         @BeforeEach
         void setUp() {
@@ -455,117 +464,63 @@ class RideServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should update status to IN_PROGRESS successfully")
-        void updateRideStatus_ToInProgress_ShouldSucceed() {
+        @DisplayName("Should cancel ride and mark status CANCELLED")
+        void cancelRide_NoBookings_ShouldSucceed() {
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
-            when(rideMapper.toResponseDto(testRide)).thenReturn(testResponseDto);
+            when(bookingRepository.findByRideId(100L)).thenReturn(List.of());
+            when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
-            RideResponseDto result = rideService.updateRideStatus(100L, "IN_PROGRESS");
-
-            assertThat(result).isNotNull();
-            assertThat(testRide.getStatus()).isEqualTo(RideStatus.IN_PROGRESS);
-            verify(rideRepository, times(1)).save(testRide);
-        }
-
-        @Test
-        @DisplayName("Should update status to COMPLETED successfully")
-        void updateRideStatus_ToCompleted_ShouldSucceed() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
-            when(rideMapper.toResponseDto(testRide)).thenReturn(testResponseDto);
-
-            RideResponseDto result = rideService.updateRideStatus(100L, "COMPLETED");
-
-            assertThat(result).isNotNull();
-            assertThat(testRide.getStatus()).isEqualTo(RideStatus.COMPLETED);
-            verify(rideRepository, times(1)).save(testRide);
-        }
-
-        @Test
-        @DisplayName("Should update status to CANCELLED when no bookings")
-        void updateRideStatus_ToCancelled_NoBookings_ShouldSucceed() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(0);
-            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
-            when(rideMapper.toResponseDto(testRide)).thenReturn(testResponseDto);
-
-            RideResponseDto result = rideService.updateRideStatus(100L, "CANCELLED");
+            RideResponseDto result = rideService.cancelRide(100L);
 
             assertThat(result).isNotNull();
             assertThat(testRide.getStatus()).isEqualTo(RideStatus.CANCELLED);
+            verify(rideRepository, times(1)).save(testRide);
         }
 
         @Test
-        @DisplayName("Should throw exception when id is null")
-        void updateRideStatus_NullId_ShouldThrowException() {
-            assertThatThrownBy(() -> rideService.updateRideStatus(null, "IN_PROGRESS"))
+        @DisplayName("Should cancel active bookings when ride is cancelled")
+        void cancelRide_WithBookings_ShouldCancelBookings() {
+            Booking b = new Booking();
+            b.setStatus(BookingStatus.CONFIRMED);
+            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
+            when(bookingRepository.findByRideId(100L)).thenReturn(List.of(b));
+            when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
+
+            rideService.cancelRide(100L);
+
+            assertThat(b.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+            verify(bookingRepository, times(1)).save(b);
+        }
+
+        @Test
+        @DisplayName("Should throw when id is null")
+        void cancelRide_NullId_ShouldThrowException() {
+            assertThatThrownBy(() -> rideService.cancelRide(null))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Ride ID cannot be null");
             verify(rideRepository, never()).findById(any());
         }
 
-        @ParameterizedTest
-        @NullAndEmptySource
-        @ValueSource(strings = {"   ", "\t", "\n"})
-        @DisplayName("Should throw exception when status is null, empty, or blank")
-        void updateRideStatus_InvalidStatus_ShouldThrowException(String status) {
-
-            assertThatThrownBy(() -> rideService.updateRideStatus(100L, status))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Status cannot be null or empty");
-
-            verify(rideRepository, never()).findById(any());
-            verify(rideRepository, never()).save(any(Ride.class));
-        }
-
         @Test
-        @DisplayName("Should throw exception when ride not found")
-        void updateRideStatus_RideNotFound_ShouldThrowException() {
+        @DisplayName("Should throw when ride not found")
+        void cancelRide_RideNotFound_ShouldThrowException() {
             when(rideRepository.findById(999L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> rideService.updateRideStatus(999L, "IN_PROGRESS"))
+            assertThatThrownBy(() -> rideService.cancelRide(999L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Ride not found with id: 999");
-            verify(rideRepository, never()).save(any(Ride.class));
         }
 
         @Test
-        @DisplayName("Should throw exception when status is invalid")
-        void updateRideStatus_InvalidStatusValue_ShouldThrowException() {
+        @DisplayName("Should throw when already cancelled")
+        void cancelRide_AlreadyCancelled_ShouldThrow() {
+            testRide.setStatus(RideStatus.CANCELLED);
             when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
 
-            assertThatThrownBy(() -> rideService.updateRideStatus(100L, "INVALID_STATUS"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Invalid status: INVALID_STATUS");
-            verify(rideRepository, never()).save(any(Ride.class));
-        }
-
-        @Test
-        @DisplayName("Should throw exception when cancelling ride with existing bookings")
-        void updateRideStatus_CancelWithBookings_ShouldThrowException() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(2);
-
-            assertThatThrownBy(() -> rideService.updateRideStatus(100L, "CANCELLED"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Cannot cancel ride with existing bookings");
-            verify(rideRepository, never()).save(any(Ride.class));
-        }
-
-        @Test
-        @DisplayName("Should handle null bookedSeats when cancelling")
-        void updateRideStatus_CancelWithNullBookedSeats_ShouldSucceed() {
-            when(rideRepository.findById(100L)).thenReturn(Optional.of(testRide));
-            when(bookingRepository.getTotalBookedSeatsForRide(100L)).thenReturn(null);
-            when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
-            when(rideMapper.toResponseDto(testRide)).thenReturn(testResponseDto);
-
-            RideResponseDto result = rideService.updateRideStatus(100L, "CANCELLED");
-
-            assertThat(result).isNotNull();
-            assertThat(testRide.getStatus()).isEqualTo(RideStatus.CANCELLED);
-            verify(rideRepository, times(1)).save(testRide);
+            assertThatThrownBy(() -> rideService.cancelRide(100L))
+                    .isInstanceOf(ConflictException.class);
         }
     }
 
@@ -576,7 +531,9 @@ class RideServiceImplTest {
         @DisplayName("Should create multiple rides successfully")
         void createRidesBulk_Success_ShouldReturnListOfRides() {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
-            when(routeRepository.findAll()).thenReturn(List.of(testRoute));
+            when(routeRepository.findFirstByStartPointAndEndPointAndDistanceKmAndEstimatedDurationMinutes(
+                    eq("Москва"), eq("Санкт-Петербург"), eq(700.0), eq(480)))
+                    .thenReturn(Optional.of(testRoute));
             when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
@@ -595,7 +552,9 @@ class RideServiceImplTest {
             driverWithNullList.setRidesAsDriver(null);
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(driverWithNullList));
-            when(routeRepository.findAll()).thenReturn(List.of(testRoute));
+            when(routeRepository.findFirstByStartPointAndEndPointAndDistanceKmAndEstimatedDurationMinutes(
+                    eq("Москва"), eq("Санкт-Петербург"), eq(700.0), eq(480)))
+                    .thenReturn(Optional.of(testRoute));
             when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
@@ -613,15 +572,21 @@ class RideServiceImplTest {
             Route route1 = new Route();
             route1.setId(10L);
             route1.setStartPoint("Москва");
-            route1.setEndPoint("СПб");
+            route1.setEndPoint("Санкт-Петербург");
+            route1.setDistanceKm(700.0);
+            route1.setEstimatedDurationMinutes(480);
 
             Route route2 = new Route();
             route2.setId(20L);
             route2.setStartPoint("Москва");
-            route2.setEndPoint("СПб");
+            route2.setEndPoint("Санкт-Петербург");
+            route2.setDistanceKm(700.0);
+            route2.setEstimatedDurationMinutes(480);
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
-            when(routeRepository.findAll()).thenReturn(Arrays.asList(route1, route2));
+            when(routeRepository.findFirstByStartPointAndEndPointAndDistanceKmAndEstimatedDurationMinutes(
+                    eq("Москва"), eq("Санкт-Петербург"), eq(700.0), eq(480)))
+                    .thenReturn(Optional.of(route1));
             when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
@@ -651,6 +616,8 @@ class RideServiceImplTest {
             RouteRequestDto routeDto = new RouteRequestDto();
             routeDto.setStartPoint("Москва");
             routeDto.setEndPoint("СПб");
+            routeDto.setDistanceKm(100.0);
+            routeDto.setEstimatedDurationMinutes(120);
             highPriceRide.setRoute(routeDto);
 
             BulkRideRequestDto bulkRequest = new BulkRideRequestDto(1L, List.of(highPriceRide));
@@ -668,17 +635,14 @@ class RideServiceImplTest {
             Route route1 = new Route();
             route1.setId(10L);
             route1.setStartPoint("Москва");
-            route1.setEndPoint("СПб");
-
-            Route route2 = new Route();
-            route2.setId(20L);
-            route2.setStartPoint("Москва");
-            route2.setEndPoint("СПб");
-
-            List<Route> routesWithDuplicates = Arrays.asList(route1, route2);
+            route1.setEndPoint("Санкт-Петербург");
+            route1.setDistanceKm(700.0);
+            route1.setEstimatedDurationMinutes(480);
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testDriver));
-            when(routeRepository.findAll()).thenReturn(routesWithDuplicates);
+            when(routeRepository.findFirstByStartPointAndEndPointAndDistanceKmAndEstimatedDurationMinutes(
+                    eq("Москва"), eq("Санкт-Петербург"), eq(700.0), eq(480)))
+                    .thenReturn(Optional.of(route1));
             when(rideMapper.toEntity(any(RideRequestDto.class))).thenReturn(testRide);
             when(rideRepository.save(any(Ride.class))).thenReturn(testRide);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
@@ -703,7 +667,7 @@ class RideServiceImplTest {
 
             List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide);
 
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(manyRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -715,7 +679,7 @@ class RideServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
-            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, never()).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
@@ -726,7 +690,7 @@ class RideServiceImplTest {
 
             List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide);
 
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(manyRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -738,7 +702,7 @@ class RideServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).isEmpty();
-            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, never()).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
@@ -749,7 +713,7 @@ class RideServiceImplTest {
 
             List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide, testRide);
 
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(manyRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -761,7 +725,7 @@ class RideServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2); // элементы с 3 по 4 (2 элемента)
-            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, never()).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
@@ -772,7 +736,7 @@ class RideServiceImplTest {
 
             List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide);
 
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(manyRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -784,27 +748,12 @@ class RideServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(rideRepository, never()).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, never()).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
-        @DisplayName("Should search with JPQL")
-        void searchRides_JPQL_ShouldSearchFromDatabase() {
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
-                    .thenReturn(mockRides);
-            when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
-
-            Page<RideResponseDto> result = rideService.searchRides(searchRequest);
-
-            assertThat(result).isNotNull();
-            assertThat(result.getContent()).hasSize(2);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
-        }
-
-        @Test
-        @DisplayName("Should search with Native query")
-        void searchRides_Native_ShouldSearchFromDatabase() {
-            searchRequest.setUseNative(true);
+        @DisplayName("Should search via native SQL (PostgreSQL-safe casts)")
+        void searchRides_ShouldSearchFromDatabase() {
             when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(mockRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
@@ -819,23 +768,23 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should return cached data on second call")
         void searchRides_SecondCall_ShouldUseCache() {
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(mockRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
             rideService.searchRides(searchRequest);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
 
             Page<RideResponseDto> secondResult = rideService.searchRides(searchRequest);
 
             assertThat(secondResult.getContent()).hasSize(2);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
         @DisplayName("Should return empty page when no results")
         void searchRides_NoResults_ShouldReturnEmptyPage() {
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(List.of());
 
             Page<RideResponseDto> result = rideService.searchRides(searchRequest);
@@ -853,7 +802,7 @@ class RideServiceImplTest {
 
             List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide);
 
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(manyRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -865,7 +814,7 @@ class RideServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
     }
 
@@ -892,7 +841,7 @@ class RideServiceImplTest {
         @Test
         @DisplayName("Should NOT use cache when key does not exist (first call)")
         void searchRides_FirstCall_CacheMiss() {
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(mockRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
@@ -900,36 +849,36 @@ class RideServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
         @DisplayName("Should use cache on second call (cache hit)")
         void searchRides_SecondCall_CacheHit() {
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(mockRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
             rideService.searchRides(searchRequest);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
 
             Page<RideResponseDto> result = rideService.searchRides(searchRequest);
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
 
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
         @DisplayName("Should NOT use cache after invalidation")
         void searchRides_AfterInvalidation_CacheMiss() {
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(mockRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
             rideService.searchRides(searchRequest);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
 
             rideService.invalidateCache();
 
@@ -938,7 +887,7 @@ class RideServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
 
-            verify(rideRepository, times(2)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(2)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
@@ -949,12 +898,12 @@ class RideServiceImplTest {
 
             List<Ride> manyRides = Arrays.asList(testRide, testRide, testRide, testRide);
 
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(manyRides);
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 
             rideService.searchRides(searchRequest);
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
 
             Pageable pageable1 = PageRequest.of(1, 2);
             searchRequest.setPageable(pageable1);
@@ -964,13 +913,13 @@ class RideServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(2);
 
-            verify(rideRepository, times(1)).searchRides(any(), any(), any(), any(), any(), any(), any());
+            verify(rideRepository, times(1)).searchRidesNative(any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
         @DisplayName("invalidateCache() should clear cache and increment modification count")
         void invalidateCache_ShouldClearCache() {
-            when(rideRepository.searchRides(any(), any(), any(), any(), any(), any(), any()))
+            when(rideRepository.searchRidesNative(any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(List.of(testRide));
             when(rideMapper.toResponseDto(any(Ride.class))).thenReturn(testResponseDto);
 

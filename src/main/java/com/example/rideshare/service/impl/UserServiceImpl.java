@@ -11,6 +11,7 @@ import com.example.rideshare.repository.UserRepository;
 import com.example.rideshare.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -22,11 +23,23 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     private static final String USER_NOT_FOUND = "User not found with id: ";
     private static final String USER_ID_NULL = "User ID cannot be null";
     private static final String USER_EMAIL_EXISTS = "User with email %s already exists";
     private static final String EMAIL_TAKEN = "Email %s is already taken";
+    private static final String PASSWORD_TOO_SHORT = "Password must be at least 8 characters";
+
+    private void applyPasswordIfPresent(User user, UserRequestDto dto) {
+        if (dto.getPassword() == null || dto.getPassword().isBlank()) {
+            return;
+        }
+        if (dto.getPassword().length() < 8) {
+            throw new BusinessException(PASSWORD_TOO_SHORT);
+        }
+        user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -55,6 +68,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User user = userMapper.toEntity(userDto);
+        applyPasswordIfPresent(user, userDto);
         User savedUser = userRepository.save(user);
 
         return userMapper.toResponseDto(savedUser);
@@ -87,6 +101,8 @@ public class UserServiceImpl implements UserService {
         if (userDto.getRating() != null) {
             existingUser.setRating(userDto.getRating());
         }
+
+        applyPasswordIfPresent(existingUser, userDto);
 
         User updatedUser = userRepository.save(existingUser);
 

@@ -23,8 +23,8 @@ public class ReviewRequestDto {
     @Size(max = 1000, message = "Comment cannot exceed 1000 characters")
     private String comment;
 
-    @Schema(description = "Reviewer ID", example = "3", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "Reviewer ID is required")
+    @Schema(description = "Автор отзыва (только для администратора; иначе берётся из сессии)",
+            example = "3", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     @Positive(message = "Reviewer ID must be positive")
     private Long reviewerId;
 

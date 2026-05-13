@@ -2,6 +2,7 @@ package com.example.rideshare.service.impl;
 
 import com.example.rideshare.exception.BusinessException;
 import com.example.rideshare.exception.ConflictException;
+import com.example.rideshare.exception.ForbiddenException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.BookingMapper;
 import com.example.rideshare.model.dto.BookingRequestDto;
@@ -14,6 +15,7 @@ import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.UserRepository;
+import com.example.rideshare.security.CurrentUserAccessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,6 +39,10 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.eq;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -54,6 +60,9 @@ class BookingServiceImplTest {
 
     @Mock
     private BookingMapper bookingMapper;
+
+    @Mock
+    private CurrentUserAccessor currentUserAccessor;
 
     @InjectMocks
     private BookingServiceImpl bookingService;
@@ -97,6 +106,9 @@ class BookingServiceImplTest {
         testResponse.setId(1000L);
         testResponse.setSeats(2);
         testResponse.setStatus(BookingStatus.PENDING);
+
+        lenient().doNothing().when(currentUserAccessor).requireAdminOrPassengerOrDriver(anyLong(), anyLong());
+        lenient().doNothing().when(currentUserAccessor).requireAdminOrDriver(anyLong());
     }
 
     @Nested
@@ -269,6 +281,7 @@ class BookingServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(testBooking.getStatus()).isEqualTo(BookingStatus.CANCELLED);
             verify(bookingRepository, times(1)).save(testBooking);
+            verify(currentUserAccessor).requireAdminOrPassengerOrDriver(1L, 10L);
         }
 
         @Test
@@ -305,6 +318,20 @@ class BookingServiceImplTest {
                     .hasMessageContaining("Booking is already cancelled");
             verify(bookingRepository, never()).save(any(Booking.class));
         }
+
+        @Test
+        @DisplayName("Should throw Forbidden when caller cannot cancel this booking")
+        void cancelBooking_NotPassengerDriverOrAdmin_ShouldThrowForbidden() {
+            reset(currentUserAccessor);
+            when(bookingRepository.findById(1000L)).thenReturn(Optional.of(testBooking));
+            doThrow(new ForbiddenException("Нет прав"))
+                    .when(currentUserAccessor)
+                    .requireAdminOrPassengerOrDriver(eq(1L), eq(10L));
+
+            assertThatThrownBy(() -> bookingService.cancelBooking(1000L))
+                    .isInstanceOf(ForbiddenException.class);
+            verify(bookingRepository, never()).save(any(Booking.class));
+        }
     }
 
     @Nested
@@ -323,6 +350,7 @@ class BookingServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(testBooking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
             verify(bookingRepository, times(1)).save(testBooking);
+            verify(currentUserAccessor).requireAdminOrDriver(10L);
         }
 
         @Test
@@ -334,6 +362,20 @@ class BookingServiceImplTest {
             assertThatThrownBy(() -> bookingService.confirmBooking(1000L))
                     .isInstanceOf(ConflictException.class)
                     .hasMessageContaining("Only pending bookings can be confirmed");
+            verify(bookingRepository, never()).save(any(Booking.class));
+        }
+
+        @Test
+        @DisplayName("Should throw Forbidden when non-driver tries to confirm")
+        void confirmBooking_NotDriverOrAdmin_ShouldThrowForbidden() {
+            reset(currentUserAccessor);
+            when(bookingRepository.findById(1000L)).thenReturn(Optional.of(testBooking));
+            doThrow(new ForbiddenException("Только водитель"))
+                    .when(currentUserAccessor)
+                    .requireAdminOrDriver(eq(10L));
+
+            assertThatThrownBy(() -> bookingService.confirmBooking(1000L))
+                    .isInstanceOf(ForbiddenException.class);
             verify(bookingRepository, never()).save(any(Booking.class));
         }
     }

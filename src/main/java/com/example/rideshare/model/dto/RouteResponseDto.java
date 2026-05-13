@@ -10,4 +10,5 @@ public class RouteResponseDto {
     private Double distanceKm;
     private Integer estimatedDurationMinutes;
     private String waypoints;
+    private Long createdByUserId;
 }

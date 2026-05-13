@@ -1,40 +1,47 @@
 package com.example.rideshare.service.impl;
 
-import com.example.rideshare.model.dto.BulkRideRequestDto;
-import com.example.rideshare.model.dto.RideResponseDto;
-import com.example.rideshare.model.dto.RideRequestDto;
-import com.example.rideshare.model.dto.RideSearchCriteria;
-import com.example.rideshare.model.dto.RideSearchRequest;
-import com.example.rideshare.model.entity.Ride;
-import com.example.rideshare.model.entity.Route;
-import com.example.rideshare.model.entity.User;
 import com.example.rideshare.exception.BusinessException;
+import com.example.rideshare.exception.ConflictException;
+import com.example.rideshare.exception.ForbiddenException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.RideMapper;
 import com.example.rideshare.mapper.RouteMapper;
+import com.example.rideshare.model.RideEffectiveStatuses;
+import com.example.rideshare.model.dto.BulkRideRequestDto;
+import com.example.rideshare.model.dto.RideRequestDto;
+import com.example.rideshare.model.dto.RideResponseDto;
+import com.example.rideshare.model.dto.RideSearchCriteria;
+import com.example.rideshare.model.dto.RideSearchRequest;
+import com.example.rideshare.model.dto.RouteRequestDto;
+import com.example.rideshare.model.entity.Booking;
+import com.example.rideshare.model.entity.Ride;
+import com.example.rideshare.model.entity.Route;
+import com.example.rideshare.model.entity.User;
+import com.example.rideshare.model.enums.BookingStatus;
 import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.RouteRepository;
 import com.example.rideshare.repository.UserRepository;
+import com.example.rideshare.security.CurrentUserAccessor;
 import com.example.rideshare.service.RideService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
+import java.util.Locale;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.IntStream;
@@ -50,6 +57,8 @@ public class RideServiceImpl implements RideService {
     private final RouteRepository routeRepository;
     private final RideMapper rideMapper;
     private final RouteMapper routeMapper;
+    private final CurrentUserAccessor currentUserAccessor;
+
     private final Map<RideSearchCriteria, Page<RideResponseDto>> searchCache = new HashMap<>();
     private final ReentrantReadWriteLock cacheLock = new ReentrantReadWriteLock();
     private final AtomicLong modificationCount = new AtomicLong(0);
@@ -57,19 +66,8 @@ public class RideServiceImpl implements RideService {
 
     private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
-    private static final String TIME_IN_FUTURE = "Departure time must be in the future";
+    private static final String DEPARTURE_IN_PAST = "Время отправления должно быть в будущем";
     private static final String CANNOT_DELETE = "Cannot delete ride with existing bookings";
-    private static final String CANNOT_CANCEL = "Cannot cancel ride with existing bookings";
-    private static final String INVALID_STATUS = "Invalid status: ";
-    private static final String STATUS_IS_NULL = "Status cannot be null or empty";
-    private static final String STATUS_SCHEDULED = "SCHEDULED";
-    private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
-    private static final String STATUS_COMPLETED = "COMPLETED";
-    private static final String STATUS_CANCELLED = "CANCELLED";
-
-    private static final List<String> VALID_STATUSES = List.of(
-            STATUS_SCHEDULED, STATUS_IN_PROGRESS, STATUS_COMPLETED, STATUS_CANCELLED
-    );
 
     @Override
     @Transactional(readOnly = true)
@@ -78,7 +76,7 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public RideResponseDto getRideById(Long id) {
         if (id == null) {
             throw new BusinessException(RIDE_ID_NULL);
@@ -87,6 +85,7 @@ public class RideServiceImpl implements RideService {
         Ride ride = rideRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
+        syncRideStatusOnDb(ride);
         return rideMapper.toResponseDto(ride);
     }
 
@@ -100,8 +99,11 @@ public class RideServiceImpl implements RideService {
         Ride existingRide = rideRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
-        if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new BusinessException(TIME_IN_FUTURE);
+        Long driverUserId = existingRide.getDriver() != null ? existingRide.getDriver().getId() : null;
+        currentUserAccessor.requireAdminOrDriver(driverUserId);
+
+        if (!request.getDepartureTime().isAfter(LocalDateTime.now())) {
+            throw new BusinessException(DEPARTURE_IN_PAST);
         }
         existingRide.setDepartureTime(request.getDepartureTime());
         existingRide.setAvailableSeats(request.getAvailableSeats());
@@ -110,10 +112,12 @@ public class RideServiceImpl implements RideService {
         if (existingRide.getRoute() != null && request.getRoute() != null) {
             Route updatedRoute = routeMapper.toEntity(request.getRoute());
             updatedRoute.setId(existingRide.getRoute().getId());
+            updatedRoute.setCreatedByUserId(existingRide.getRoute().getCreatedByUserId());
             existingRide.setRoute(updatedRoute);
         }
 
         Ride updatedRide = rideRepository.save(existingRide);
+        syncRideStatusOnDb(updatedRide);
         this.invalidateCache();
 
         return rideMapper.toResponseDto(updatedRide);
@@ -129,6 +133,9 @@ public class RideServiceImpl implements RideService {
         Ride ride = rideRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
+        Long driverUserId = ride.getDriver() != null ? ride.getDriver().getId() : null;
+        currentUserAccessor.requireAdminOrDriver(driverUserId);
+
         Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
         if (bookedSeats != null && bookedSeats > 0) {
             throw new BusinessException(CANNOT_DELETE);
@@ -141,35 +148,35 @@ public class RideServiceImpl implements RideService {
 
     @Override
     @Transactional
-    public RideResponseDto updateRideStatus(Long id, String status) {
+    public RideResponseDto cancelRide(Long id) {
         if (id == null) {
             throw new BusinessException(RIDE_ID_NULL);
-        }
-
-        if (status == null || status.trim().isEmpty()) {
-            throw new BusinessException(STATUS_IS_NULL);
         }
 
         Ride ride = rideRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + id));
 
-        if (!VALID_STATUSES.contains(status)) {
-            throw new BusinessException(INVALID_STATUS + status);
+        Long driverUserId = ride.getDriver() != null ? ride.getDriver().getId() : null;
+        currentUserAccessor.requireRideDriver(driverUserId);
+
+        if (ride.getStatus() == RideStatus.CANCELLED) {
+            throw new ConflictException("Поездка уже отменена");
         }
 
-        if (STATUS_CANCELLED.equals(status)) {
-            Integer bookedSeats = bookingRepository.getTotalBookedSeatsForRide(id);
-            if (bookedSeats != null && bookedSeats > 0) {
-                throw new BusinessException(CANNOT_CANCEL);
+        for (Booking b : bookingRepository.findByRideId(id)) {
+            if (b.getStatus() == BookingStatus.PENDING || b.getStatus() == BookingStatus.CONFIRMED) {
+                b.setStatus(BookingStatus.CANCELLED);
+                bookingRepository.save(b);
             }
         }
 
-        ride.setStatus(RideStatus.valueOf(status));
-        Ride updatedRide = rideRepository.save(ride);
-
-        return rideMapper.toResponseDto(updatedRide);
+        ride.setStatus(RideStatus.CANCELLED);
+        Ride saved = rideRepository.save(ride);
+        invalidateCache();
+        return rideMapper.toResponseDto(saved);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Page<RideResponseDto> searchRides(RideSearchRequest request) {
         RideSearchCriteria cacheKey = new RideSearchCriteria(
@@ -188,7 +195,9 @@ public class RideServiceImpl implements RideService {
         try {
             if (modificationCount.get() == lastCacheModificationCount) {
                 Page<RideResponseDto> cachedPage = searchCache.get(cacheKey);
-                cachedData = cachedPage.getContent();
+                if (cachedPage != null) {
+                    cachedData = cachedPage.getContent();
+                }
             }
         } finally {
             cacheLock.readLock().unlock();
@@ -206,26 +215,18 @@ public class RideServiceImpl implements RideService {
 
             resultPage = new PageImpl<>(pagedContent, request.getPageable(), cachedData.size());
         } else {
-            List<Ride> allRides;
-            if (request.isUseNative()) {
-                allRides = rideRepository.searchRidesNative(
-                        request.getStartPoint(),
-                        request.getEndPoint(),
-                        request.getFromDate(),
-                        request.getToDate(),
-                        request.getMinPrice(),
-                        request.getMaxPrice(),
-                        request.getMinSeats());
-            } else {
-                allRides = rideRepository.searchRides(
-                        request.getStartPoint(),
-                        request.getEndPoint(),
-                        request.getFromDate(),
-                        request.getToDate(),
-                        request.getMinPrice(),
-                        request.getMaxPrice(),
-                        request.getMinSeats());
-            }
+            String startPattern = likePatternOrNull(request.getStartPoint());
+            String endPattern = likePatternOrNull(request.getEndPoint());
+            // Нативный SQL с CAST — иначе PostgreSQL даёт «could not determine data type of parameter»
+            // на выражениях вида (:fromDate IS NULL OR ... >= :fromDate) из JPQL.
+            List<Ride> allRides = rideRepository.searchRidesNative(
+                    startPattern,
+                    endPattern,
+                    request.getFromDate(),
+                    request.getToDate(),
+                    request.getMinPrice(),
+                    request.getMaxPrice(),
+                    request.getMinSeats());
 
             List<RideResponseDto> allData = allRides.stream()
                     .map(rideMapper::toResponseDto)
@@ -253,24 +254,23 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
+    @Transactional
     public List<RideResponseDto> createRidesBulk(BulkRideRequestDto request) {
 
         Long driverId = request.driverId();
-
-        User driver = userRepository.findById(driverId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver not found: " + driverId));
-
-        Set<String> routeKeys = request.rides().stream()
-                .map(ride -> ride.getRoute().getStartPoint() + "|" + ride.getRoute().getEndPoint())
-                .collect(Collectors.toSet());
-
-        Map<String, Route> routesByKey = new HashMap<>();
-        for (Route route : routeRepository.findAll()) {
-            String key = route.getStartPoint() + "|" + route.getEndPoint();
-            if (routeKeys.contains(key)) {
-                routesByKey.put(key, route);
+        if (!currentUserAccessor.isAdmin()) {
+            Long uid = currentUserAccessor.currentUserIdOrNull();
+            if (uid == null) {
+                throw new ForbiddenException("Нужна авторизация участника.");
             }
+            driverId = uid;
         }
+
+        Long finalDriverId = driverId;
+        User driver = userRepository.findById(finalDriverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found: " + finalDriverId));
+
+        Map<String, Route> routeBatchCache = new HashMap<>();
 
         List<RideResponseDto> results = new ArrayList<>();
 
@@ -289,14 +289,7 @@ public class RideServiceImpl implements RideService {
                                 .orElseThrow(() -> new BusinessException(
                                         "Departure time must be in the future for ride #" + index));
 
-                        String routeKey = rideDto.getRoute().getStartPoint() + "|" + rideDto.getRoute().getEndPoint();
-                        Route route = Optional.ofNullable(routesByKey.get(routeKey))
-                                .orElseGet(() -> {
-                                    Route newRoute = routeMapper.toEntity(rideDto.getRoute());
-                                    Route savedRoute = routeRepository.save(newRoute);
-                                    routesByKey.put(routeKey, savedRoute);
-                                    return savedRoute;
-                                });
+                        Route route = resolveRouteForRide(rideDto.getRoute(), finalDriverId, routeBatchCache);
 
                         Ride ride = rideMapper.toEntity(rideDto);
                         ride.setDriver(driver);
@@ -333,6 +326,94 @@ public class RideServiceImpl implements RideService {
         return results;
     }
 
+    /**
+     * Подбирает существующий маршрут с теми же пунктами, длиной и временем в пути, иначе создаёт новый.
+     */
+    private Route resolveRouteForRide(RouteRequestDto dto, Long creatorUserId, Map<String, Route> batchCache) {
+        if (dto == null) {
+            throw new BusinessException("Маршрут поездки обязателен.");
+        }
+        String start = normalizeRoutePoint(dto.getStartPoint());
+        String end = normalizeRoutePoint(dto.getEndPoint());
+        Double dist = dto.getDistanceKm();
+        Integer mins = dto.getEstimatedDurationMinutes();
+        if (dist == null || mins == null) {
+            throw new BusinessException("Укажите расстояние (км) и время в пути (мин) для маршрута.");
+        }
+        String cacheKey = start + "|" + end + "|" + dist + "|" + mins;
+        Route cached = batchCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        Route route = routeRepository
+                .findFirstByStartPointAndEndPointAndDistanceKmAndEstimatedDurationMinutes(start, end, dist, mins)
+                .orElseGet(() -> {
+                    Route nr = routeMapper.toEntity(dto);
+                    nr.setStartPoint(start);
+                    nr.setEndPoint(end);
+                    nr.setDistanceKm(dist);
+                    nr.setEstimatedDurationMinutes(mins);
+                    nr.setCreatedByUserId(creatorUserId);
+                    return routeRepository.save(nr);
+                });
+        batchCache.put(cacheKey, route);
+        return route;
+    }
+
+    private static String normalizeRoutePoint(String raw) {
+        return raw == null ? "" : raw.trim();
+    }
+
+    /**
+     * Периодически синхронизирует статусы в БД (кроме отменённых).
+     */
+    @Scheduled(fixedDelayString = "${app.rides.status-refresh-ms:60000}")
+    @Transactional
+    public void scheduledRefreshRideStatuses() {
+        LocalDateTime now = LocalDateTime.now();
+        boolean changed = false;
+        for (Ride ride : rideRepository.findByStatusNot(RideStatus.CANCELLED)) {
+            RideStatus target = RideEffectiveStatuses.calculate(ride, now);
+            if (target != ride.getStatus()) {
+                ride.setStatus(target);
+                rideRepository.save(ride);
+                changed = true;
+            }
+        }
+        if (changed) {
+            invalidateCache();
+        }
+    }
+
+    private void syncRideStatusOnDb(Ride ride) {
+        if (ride.getStatus() == RideStatus.CANCELLED) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        RideStatus target = RideEffectiveStatuses.calculate(ride, now);
+        if (target != ride.getStatus()) {
+            ride.setStatus(target);
+            rideRepository.save(ride);
+            invalidateCache();
+        }
+    }
+
+    /**
+     * Готовый шаблон для LIKE/ILIKE (нижний регистр для JPQL LOWER(column) LIKE pattern).
+     * {@code null} — не фильтровать по этому полю.
+     */
+    private static String likePatternOrNull(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return "%" + trimmed.toLowerCase(Locale.ROOT) + "%";
+    }
+
+    @Override
     public void invalidateCache() {
         cacheLock.writeLock().lock();
         try {
@@ -343,6 +424,7 @@ public class RideServiceImpl implements RideService {
         }
     }
 
+    @Override
     public Map<String, Object> getCacheStats() {
         cacheLock.readLock().lock();
         try {

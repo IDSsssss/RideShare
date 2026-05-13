@@ -1,11 +1,13 @@
 package com.example.rideshare.mapper;
 
+import com.example.rideshare.model.RideEffectiveStatuses;
 import com.example.rideshare.model.dto.RideRequestDto;
 import com.example.rideshare.model.dto.RideResponseDto;
 import com.example.rideshare.model.entity.Ride;
 import com.example.rideshare.model.enums.RideStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -25,7 +27,7 @@ public class RideMapper {
         dto.setDepartureTime(ride.getDepartureTime());
         dto.setAvailableSeats(ride.getAvailableSeats());
         dto.setPrice(ride.getPrice());
-        dto.setStatus(String.valueOf(ride.getStatus()));
+        dto.setStatus(String.valueOf(RideEffectiveStatuses.calculate(ride, LocalDateTime.now())));
 
         if (ride.getDriver() != null) {
             dto.setDriver(userMapper.toResponseDto(ride.getDriver()));

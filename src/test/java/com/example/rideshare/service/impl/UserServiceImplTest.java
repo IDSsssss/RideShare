@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -42,6 +43,9 @@ class UserServiceImplTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -159,6 +163,7 @@ class UserServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.getEmail()).isEqualTo("ivan@example.com");
             verify(userRepository, times(1)).save(testUser);
+            verify(passwordEncoder, never()).encode(anyString());
         }
 
         @Test
@@ -192,6 +197,7 @@ class UserServiceImplTest {
 
             assertThat(result).isNotNull();
             verify(userRepository, times(1)).save(any(User.class));
+            verify(passwordEncoder, never()).encode(anyString());
         }
     }
 
@@ -234,6 +240,7 @@ class UserServiceImplTest {
             assertThat(result.getName()).isEqualTo("Иван Петров Обновленный");
             assertThat(result.getEmail()).isEqualTo("ivan.new@example.com");
             verify(userRepository, times(1)).save(any(User.class));
+            verify(passwordEncoder, never()).encode(anyString());
         }
 
         @Test

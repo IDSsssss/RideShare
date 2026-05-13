@@ -2,6 +2,7 @@ package com.example.rideshare.model.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -20,12 +21,14 @@ public class RouteRequestDto {
     @Size(min = 2, max = 100, message = "End point must be between 2 and 100 characters")
     private String endPoint;
 
-    @Schema(description = "Distance in kilometers", example = "700.5")
-    @Positive(message = "Distance must be positive")
+    @Schema(description = "Distance in kilometers", example = "700.5", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "Укажите длину маршрута (км)")
+    @Positive(message = "Расстояние должно быть положительным")
     private Double distanceKm;
 
-    @Schema(description = "Estimated duration in minutes", example = "480")
-    @Positive(message = "Duration must be positive")
+    @Schema(description = "Estimated duration in minutes", example = "480", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "Укажите время в пути (мин)")
+    @Positive(message = "Время в пути должно быть положительным")
     private Integer estimatedDurationMinutes;
 
     @Schema(description = "Waypoints (optional)", example = "Тверь, Валдай")

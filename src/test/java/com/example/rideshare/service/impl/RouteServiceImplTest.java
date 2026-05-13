@@ -7,6 +7,7 @@ import com.example.rideshare.model.dto.RouteRequestDto;
 import com.example.rideshare.model.dto.RouteResponseDto;
 import com.example.rideshare.model.entity.Route;
 import com.example.rideshare.repository.RouteRepository;
+import com.example.rideshare.security.CurrentUserAccessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,6 +24,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
@@ -42,6 +44,9 @@ class RouteServiceImplTest {
 
     @Mock
     private RouteMapper routeMapper;
+
+    @Mock
+    private CurrentUserAccessor currentUserAccessor;
 
     @InjectMocks
     private RouteServiceImpl routeService;
@@ -74,6 +79,9 @@ class RouteServiceImplTest {
         testResponseDto.setDistanceKm(700.5);
         testResponseDto.setEstimatedDurationMinutes(480);
         testResponseDto.setWaypoints("Тверь, Валдай");
+
+        lenient().when(currentUserAccessor.isAdmin()).thenReturn(true);
+        lenient().when(currentUserAccessor.currentUserIdOrNull()).thenReturn(42L);
     }
 
     @Nested
@@ -260,23 +268,23 @@ class RouteServiceImplTest {
         @Test
         @DisplayName("Should delete route successfully")
         void deleteRoute_Success_ShouldDeleteRoute() {
-            when(routeRepository.existsById(10L)).thenReturn(true);
-            doNothing().when(routeRepository).deleteById(10L);
+            when(routeRepository.findById(10L)).thenReturn(Optional.of(testRoute));
+            doNothing().when(routeRepository).delete(testRoute);
 
             routeService.deleteRoute(10L);
 
-            verify(routeRepository, times(1)).deleteById(10L);
+            verify(routeRepository, times(1)).delete(testRoute);
         }
 
         @Test
         @DisplayName("Should throw exception when route not found")
         void deleteRoute_NotFound_ShouldThrowException() {
-            when(routeRepository.existsById(999L)).thenReturn(false);
+            when(routeRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> routeService.deleteRoute(999L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Route not found with id: 999");
-            verify(routeRepository, never()).deleteById(anyLong());
+            verify(routeRepository, never()).delete(any());
         }
     }
 

@@ -12,6 +12,7 @@ import java.util.List;
 public class ReviewMapper {
 
     private final UserMapper userMapper;
+    private final RideMapper rideMapper;
 
     public ReviewResponseDto toResponseDto(Review review) {
         if (review == null) {
@@ -26,6 +27,10 @@ public class ReviewMapper {
 
         if (review.getReviewer() != null) {
             dto.setReviewer(userMapper.toResponseDto(review.getReviewer()));
+        }
+
+        if (review.getRide() != null) {
+            dto.setRide(rideMapper.toResponseDto(review.getRide()));
         }
 
         return dto;

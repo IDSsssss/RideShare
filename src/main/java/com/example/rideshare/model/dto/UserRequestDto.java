@@ -31,6 +31,11 @@ public class UserRequestDto {
     @Pattern(regexp = "^\\+?\\d{10,15}$", message = "Phone must be 10-15 digits, optionally starting with +")
     private String phone;
 
+    @Schema(description = "Login password: set on create or when changing (min 8 characters when not empty)",
+            example = "secretpass", maxLength = 128)
+    @Size(max = 128, message = "Password must be at most 128 characters")
+    private String password;
+
     @Schema(description = "User rating", example = "4.5", minimum = "0", maximum = "5")
     @Min(value = 0, message = "Rating must be at least 0")
     @Max(value = 5, message = "Rating must be at most 5")

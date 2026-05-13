@@ -1,12 +1,14 @@
 package com.example.rideshare.service.impl;
 
+import com.example.rideshare.exception.BusinessException;
+import com.example.rideshare.exception.ForbiddenException;
+import com.example.rideshare.exception.ResourceNotFoundException;
+import com.example.rideshare.mapper.RouteMapper;
 import com.example.rideshare.model.dto.RouteRequestDto;
 import com.example.rideshare.model.dto.RouteResponseDto;
 import com.example.rideshare.model.entity.Route;
-import com.example.rideshare.exception.BusinessException;
-import com.example.rideshare.exception.ResourceNotFoundException;
-import com.example.rideshare.mapper.RouteMapper;
 import com.example.rideshare.repository.RouteRepository;
+import com.example.rideshare.security.CurrentUserAccessor;
 import com.example.rideshare.service.RouteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ public class RouteServiceImpl implements RouteService {
 
     private final RouteRepository routeRepository;
     private final RouteMapper routeMapper;
+    private final CurrentUserAccessor currentUserAccessor;
 
     private static final String ROUTE_NOT_FOUND = "Route not found with id: ";
     private static final String ROUTE_ID_NULL = "Route ID cannot be null";
@@ -48,6 +51,7 @@ public class RouteServiceImpl implements RouteService {
     @Transactional
     public RouteResponseDto createRoute(RouteRequestDto routeDto) {
         Route route = routeMapper.toEntity(routeDto);
+        route.setCreatedByUserId(currentUserAccessor.currentUserIdOrNull());
         Route savedRoute = routeRepository.save(route);
 
         return routeMapper.toResponseDto(savedRoute);
@@ -58,6 +62,13 @@ public class RouteServiceImpl implements RouteService {
     public RouteResponseDto updateRoute(Long id, RouteRequestDto routeDto) {
         Route existingRoute = routeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ROUTE_NOT_FOUND + id));
+
+        if (!currentUserAccessor.isAdmin()) {
+            if (existingRoute.getCreatedByUserId() == null) {
+                throw new ForbiddenException("Редактирование этого маршрута доступно только администратору.");
+            }
+            currentUserAccessor.requireAdminOrRouteCreator(existingRoute.getCreatedByUserId());
+        }
 
         existingRoute.setStartPoint(routeDto.getStartPoint());
         existingRoute.setEndPoint(routeDto.getEndPoint());
@@ -73,11 +84,17 @@ public class RouteServiceImpl implements RouteService {
     @Override
     @Transactional
     public void deleteRoute(Long id) {
-        if (!routeRepository.existsById(id)) {
-            throw new ResourceNotFoundException(ROUTE_NOT_FOUND + id);
+        Route route = routeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ROUTE_NOT_FOUND + id));
+
+        if (!currentUserAccessor.isAdmin()) {
+            if (route.getCreatedByUserId() == null) {
+                throw new ForbiddenException("Удаление этого маршрута доступно только администратору.");
+            }
+            currentUserAccessor.requireAdminOrRouteCreator(route.getCreatedByUserId());
         }
 
-        routeRepository.deleteById(id);
+        routeRepository.delete(route);
     }
 
     @Override

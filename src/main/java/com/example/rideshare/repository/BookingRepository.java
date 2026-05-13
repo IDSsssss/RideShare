@@ -16,8 +16,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByRideId(Long rideId);
 
-    @Query("SELECT COALESCE(SUM(b.seats), 0) FROM Booking b "
-            + "WHERE b.ride.id = :rideId AND b.status IN ('CONFIRMED', 'PENDING')")
+    @Query("SELECT COALESCE(SUM(b.seats), 0) FROM Booking b WHERE b.ride.id = :rideId "
+            + "AND b.status IN (com.example.rideshare.model.enums.BookingStatus.PENDING, "
+            + "com.example.rideshare.model.enums.BookingStatus.CONFIRMED)")
     Integer getTotalBookedSeatsForRide(@Param("rideId") Long rideId);
 
     @Query("SELECT b.passenger FROM Booking b WHERE b.ride.id = :rideId")

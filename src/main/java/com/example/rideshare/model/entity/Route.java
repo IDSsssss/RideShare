@@ -37,6 +37,9 @@ public class Route {
     @Column(length = 1000)
     private String waypoints;
 
+    @Column(name = "created_by_user_id")
+    private Long createdByUserId;
+
     @OneToMany(mappedBy = "route")
     private List<Ride> rides = new ArrayList<>();
 }

@@ -10,15 +10,18 @@ import com.example.rideshare.model.enums.BookingStatus;
 import com.example.rideshare.exception.BusinessException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.BookingMapper;
+import com.example.rideshare.model.RideEffectiveStatuses;
 import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.BookingRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.UserRepository;
+import com.example.rideshare.security.CurrentUserAccessor;
 import com.example.rideshare.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -30,6 +33,7 @@ public class BookingServiceImpl implements BookingService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
+    private final CurrentUserAccessor currentUserAccessor;
 
     private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
     private static final String RIDE_WITH_STATUS = "Cannot book seats in ride with status: ";
@@ -48,8 +52,9 @@ public class BookingServiceImpl implements BookingService {
         Ride ride = rideRepository.findById(request.getRideId())
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + request.getRideId()));
 
-        if (RideStatus.SCHEDULED != ride.getStatus()) {
-            throw new BusinessException(RIDE_WITH_STATUS + ride.getStatus());
+        LocalDateTime now = LocalDateTime.now();
+        if (RideEffectiveStatuses.calculate(ride, now) != RideStatus.SCHEDULED) {
+            throw new BusinessException(RIDE_WITH_STATUS + RideEffectiveStatuses.calculate(ride, now));
         }
 
         boolean alreadyBooked = bookingRepository.existsByPassengerIdAndRideIdAndStatusIn(
@@ -104,6 +109,12 @@ public class BookingServiceImpl implements BookingService {
             throw new ConflictException(ALREADY_CANCELLED);
         }
 
+        Long passengerId = booking.getPassenger() != null ? booking.getPassenger().getId() : null;
+        Long driverUserId = booking.getRide() != null && booking.getRide().getDriver() != null
+                ? booking.getRide().getDriver().getId()
+                : null;
+        currentUserAccessor.requireAdminOrPassengerOrDriver(passengerId, driverUserId);
+
         booking.setStatus(BookingStatus.CANCELLED);
         Booking cancelledBooking = bookingRepository.save(booking);
 
@@ -119,6 +130,11 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new ConflictException(CANNOT_CONFIRM);
         }
+
+        Long driverUserId = booking.getRide() != null && booking.getRide().getDriver() != null
+                ? booking.getRide().getDriver().getId()
+                : null;
+        currentUserAccessor.requireAdminOrDriver(driverUserId);
 
         booking.setStatus(BookingStatus.CONFIRMED);
         Booking confirmedBooking = bookingRepository.save(booking);

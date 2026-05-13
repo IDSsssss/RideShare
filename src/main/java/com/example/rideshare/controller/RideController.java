@@ -4,7 +4,7 @@ import com.example.rideshare.model.dto.RideRequestDto;
 import com.example.rideshare.model.dto.RideResponseDto;
 import com.example.rideshare.model.dto.RideSearchRequest;
 import com.example.rideshare.model.dto.BulkRideRequestDto;
-import com.example.rideshare.service.impl.RideServiceImpl;
+import com.example.rideshare.service.RideService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +31,7 @@ import java.util.Map;
 @RequestMapping("/rides")
 @RequiredArgsConstructor
 public class RideController extends BaseController {
-    private final RideServiceImpl rideService;
+    private final RideService rideService;
 
     @GetMapping
     public ResponseEntity<List<RideResponseDto>> getAllRides() {
@@ -61,10 +60,9 @@ public class RideController extends BaseController {
         return noContent();
     }
 
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<RideResponseDto> updateRideStatus(@PathVariable Long id,
-                                                            @RequestBody Map<String, String> request) {
-        return ok(rideService.updateRideStatus(id, request.get("status")));
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<RideResponseDto> cancelRide(@PathVariable Long id) {
+        return ok(rideService.cancelRide(id));
     }
 
     @GetMapping("/advanced")

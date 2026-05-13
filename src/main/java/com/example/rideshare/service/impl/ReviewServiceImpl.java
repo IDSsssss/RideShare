@@ -6,12 +6,15 @@ import com.example.rideshare.model.entity.Review;
 import com.example.rideshare.model.entity.Ride;
 import com.example.rideshare.model.entity.User;
 import com.example.rideshare.exception.BusinessException;
+import com.example.rideshare.exception.ForbiddenException;
 import com.example.rideshare.exception.ResourceNotFoundException;
 import com.example.rideshare.mapper.ReviewMapper;
+import com.example.rideshare.model.RideEffectiveStatuses;
 import com.example.rideshare.model.enums.RideStatus;
 import com.example.rideshare.repository.ReviewRepository;
 import com.example.rideshare.repository.RideRepository;
 import com.example.rideshare.repository.UserRepository;
+import com.example.rideshare.security.CurrentUserAccessor;
 import com.example.rideshare.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +32,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final ReviewMapper reviewMapper;
+    private final CurrentUserAccessor currentUserAccessor;
 
     private static final String RIDE_NOT_FOUND = "Ride not found with id: ";
     private static final String RIDE_ID_NULL = "Ride ID cannot be null";
@@ -42,26 +46,39 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public ReviewResponseDto createReview(ReviewRequestDto request) {
+        Long actorId = currentUserAccessor.currentUserIdOrNull();
+        if (actorId == null) {
+            throw new ForbiddenException("Нужна авторизация для создания отзыва.");
+        }
+
+        long reviewerUserId;
+        if (currentUserAccessor.isAdmin()) {
+            reviewerUserId = request.getReviewerId() != null ? request.getReviewerId() : actorId;
+        } else {
+            reviewerUserId = actorId;
+        }
+
         Ride ride = rideRepository.findById(request.getRideId())
                 .orElseThrow(() -> new ResourceNotFoundException(RIDE_NOT_FOUND + request.getRideId()));
 
-        if (RideStatus.COMPLETED != ride.getStatus()) {
+        LocalDateTime now = LocalDateTime.now();
+        if (RideEffectiveStatuses.calculate(ride, now) != RideStatus.COMPLETED) {
             throw new BusinessException(CANNOT_REVIEW);
         }
 
         boolean wasPassenger = ride.getPassengers().stream()
-                .anyMatch(p -> p.getId().equals(request.getReviewerId()));
+                .anyMatch(p -> p.getId().equals(reviewerUserId));
 
-        if (!wasPassenger && !ride.getDriver().getId().equals(request.getReviewerId())) {
+        if (!wasPassenger && !ride.getDriver().getId().equals(reviewerUserId)) {
             throw new BusinessException(NOT_PARTICIPANT);
         }
 
-        if (reviewRepository.existsByReviewerIdAndRideId(request.getReviewerId(), request.getRideId())) {
+        if (reviewRepository.existsByReviewerIdAndRideId(reviewerUserId, request.getRideId())) {
             throw new BusinessException(ALREADY_REVIEWED);
         }
 
-        User reviewer = userRepository.findById(request.getReviewerId()).orElseThrow(() ->
-                new ResourceNotFoundException(REVIEWER_NOT_FOUND + request.getReviewerId()));
+        User reviewer = userRepository.findById(reviewerUserId).orElseThrow(() ->
+                new ResourceNotFoundException(REVIEWER_NOT_FOUND + reviewerUserId));
 
         Review review = reviewMapper.toEntity(request);
         review.setReviewer(reviewer);

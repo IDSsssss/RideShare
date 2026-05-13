@@ -21,6 +21,7 @@ public class RouteMapper {
         dto.setDistanceKm(route.getDistanceKm());
         dto.setEstimatedDurationMinutes(route.getEstimatedDurationMinutes());
         dto.setWaypoints(route.getWaypoints());
+        dto.setCreatedByUserId(route.getCreatedByUserId());
 
         return dto;
     }

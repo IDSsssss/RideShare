@@ -19,7 +19,7 @@ import java.util.List;
 @Data
 @Entity
 @Table(name = "users")
-@ToString(exclude = {"ridesAsDriver", "bookings", "reviews"})
+@ToString(exclude = {"ridesAsDriver", "bookings", "reviews", "passwordHash"})
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,6 +33,9 @@ public class User {
 
     @Column(nullable = false)
     private String phone;
+
+    @Column(name = "password_hash", nullable = true)
+    private String passwordHash;
 
     private Double rating = 0.0;
 
