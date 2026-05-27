@@ -98,17 +98,48 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
     steps:
-      # 1. Клонируем репозиторий
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Устанавливаем Railway CLI
       - name: Install Railway CLI
-        run: curl -fsSL https://railway.app/install.sh | sh
+        run: |
+          # Явно используем bash для выполнения скрипта установки
+          bash -c "curl -fsSL https://railway.app/install.sh | sh"
+          # Добавляем бинарник Railway в PATH для текущего шага
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
-      # 3. Запускаем деплой, передавая токен для аутентификации
       - name: Deploy to Railway
-        run: railway up --service=${{ secrets.RAILWAY_SERVICE_ID }}
+        run: railway up --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Wait for deployment
+        run: sleep 10
+
+      - name: Healthcheck Backend
+        run: |
+          for i in {1..12}; do
+            if curl -f https://rideshare-production-7f46.up.railway.app/swagger-ui.html; then
+              echo "Backend healthcheck passed!"
+              exit 0
+            fi
+            echo "Waiting for backend... (attempt $i/12)"
+            sleep 10
+          done
+          echo "Backend healthcheck failed"
+          exit 1
+
+      - name: Healthcheck Frontend
+        run: |
+          for i in {1..12}; do
+            if curl -f https://ridesharefrontend-production.up.railway.app/health; then
+              echo "Frontend healthcheck passed!"
+              exit 0
+            fi
+            echo "Waiting for frontend... (attempt $i/12)"
+            sleep 10
+          done
+          echo "Frontend healthcheck failed"
+          exit 1}}
