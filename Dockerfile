@@ -12,23 +12,18 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-# Устанавливаем wget и создаем директорию для сертификатов
-RUN apk add --no-cache wget
-
-# Скачиваем сертификат Render
-RUN wget -O /etc/ssl/certs/render.crt https://render.com/ssl/render.crt
-
+# Копируем собранный JAR-файл
 COPY --from=build /app/target/RideShare-0.0.1-SNAPSHOT.jar app.jar
 
+# Создаем папку для логов
 RUN mkdir -p /app/logs
 
 EXPOSE 8080
 
-ENV SPRING_PROFILES_ACTIVE=prod \
-    JAVA_OPTS="-Xmx512m -Xms256m"
+ENV SPRING_PROFILES_ACTIVE=prod
 
-# Добавляем сертификат в Java truststore
-RUN keytool -keystore /opt/java/openjdk/lib/security/cacerts -storepass changeit -noprompt -trustcacerts -importcert -alias render -file /etc/ssl/certs/render.crt
+# Передаем параметры для отключения проверки SSL сертификата
+ENV JAVA_OPTS="-Xmx512m -Xms256m -Dpostgresql.ssl.mode=require -Dpostgresql.ssl.nonvalidatingfactory=true"
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:8080/swagger-ui.html || exit 1
