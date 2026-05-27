@@ -13,16 +13,12 @@ RUN npm run build
 
 FROM nginx:alpine
 
-# Устанавливаем wget (он легче curl)
-RUN apk add --no-cache wget
-
+# Копируем собранные файлы в правильную директорию
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Копируем конфиг nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
-
-# Healthcheck с wget
-HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
