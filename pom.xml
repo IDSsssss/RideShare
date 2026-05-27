@@ -35,6 +35,7 @@
             **/security/**,
             **/repository/**,
             **/utils/**,
+
             **AuthService.java,
             **/AsyncBookingExecutionService.java,
             **/AsyncBookingProcessor.java,
