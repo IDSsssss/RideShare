@@ -24,4 +24,4 @@ ENV SPRING_PROFILES_ACTIVE=prod \
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:8080/swagger-ui.html || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "echo 'SPRING_DATASOURCE_URL=' $SPRING_DATASOURCE_URL && java $JAVA_OPTS -jar app.jar"]
