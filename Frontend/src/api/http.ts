@@ -1,7 +1,7 @@
 import { clearSession, getToken } from "../auth/session";
 import type { ApiError } from "../types";
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+const BASE_URL = 'https://rideshare-production-7f46.up.railway.app';
 
 function authHeaders(path: string): Record<string, string> {
     if (path.startsWith("/api/auth")) {
