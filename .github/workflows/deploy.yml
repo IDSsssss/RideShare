@@ -8,8 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ${{ github.repository_owner }}_backend
-  FRONTEND_IMAGE: ${{ github.repository_owner }}_frontend
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   test-backend:
@@ -62,12 +61,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Convert repository owner to lowercase
-        run: |
-          echo "LOWER_OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -82,8 +81,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/backend:latest
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/backend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository }}-backend:latest
+            ${{ env.REGISTRY }}/${{ github.repository }}-backend:${{ github.sha }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
@@ -91,8 +90,8 @@ jobs:
           context: ./Frontend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/frontend:latest
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository }}-frontend:latest
+            ${{ env.REGISTRY }}/${{ github.repository }}-frontend:${{ github.sha }}
 
   deploy:
     needs: build-and-push
