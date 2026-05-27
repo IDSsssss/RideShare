@@ -1,8 +1,7 @@
 import { clearSession, getToken } from "../auth/session";
 import type { ApiError } from "../types";
 
-// ВРЕМЕННО: жёстко задаём URL бэкенда
-const BASE_URL = 'https://rideshare-production-7f46.up.railway.app';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://rideshare-production-7f46.up.railway.app';
 
 function authHeaders(path: string): Record<string, string> {
     if (path.startsWith("/api/auth")) {
@@ -44,9 +43,6 @@ function onUnauthorized(path: string): void {
 
 export async function apiGet<T>(path: string): Promise<T> {
     const url = `${BASE_URL}${path}`;
-    console.log('🔍 apiGet URL:', url);
-    console.log('🔍 BASE_URL:', BASE_URL);
-
     const res = await fetch(url, {
         credentials: "include",
         headers: { ...authHeaders(path) },
@@ -61,11 +57,6 @@ export async function apiGet<T>(path: string): Promise<T> {
 
 export async function apiPost<T, B>(path: string, body: B): Promise<T> {
     const url = `${BASE_URL}${path}`;
-    console.log('🔍 apiPost URL:', url);
-    console.log('🔍 BASE_URL:', BASE_URL);
-    console.log('🔍 path:', path);
-    console.log('🔍 body:', body);
-
     const res = await fetch(url, {
         method: "POST",
         credentials: "include",
@@ -84,9 +75,6 @@ export async function apiPost<T, B>(path: string, body: B): Promise<T> {
 
 export async function apiPut<T, B>(path: string, body: B): Promise<T> {
     const url = `${BASE_URL}${path}`;
-    console.log('🔍 apiPut URL:', url);
-    console.log('🔍 BASE_URL:', BASE_URL);
-
     const res = await fetch(url, {
         method: "PUT",
         credentials: "include",
@@ -105,9 +93,6 @@ export async function apiPut<T, B>(path: string, body: B): Promise<T> {
 
 export async function apiPatch<T, B>(path: string, body: B): Promise<T> {
     const url = `${BASE_URL}${path}`;
-    console.log('🔍 apiPatch URL:', url);
-    console.log('🔍 BASE_URL:', BASE_URL);
-
     const res = await fetch(url, {
         method: "PATCH",
         credentials: "include",
@@ -126,9 +111,6 @@ export async function apiPatch<T, B>(path: string, body: B): Promise<T> {
 
 export async function apiDelete(path: string): Promise<void> {
     const url = `${BASE_URL}${path}`;
-    console.log('🔍 apiDelete URL:', url);
-    console.log('🔍 BASE_URL:', BASE_URL);
-
     const res = await fetch(url, {
         method: "DELETE",
         credentials: "include",
