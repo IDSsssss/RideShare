@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: rideshare_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-rideshare_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-rideshare_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rideshare_network
+
+  backend:
+    build: .
+    container_name: rideshare_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-rideshare_db}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      APP_SECURITY_JWT_SECRET: ${JWT_SECRET:-rideshare-dev-jwt-secret-change-me-32b-min!!}
+      APP_SECURITY_ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      APP_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/swagger-ui.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - rideshare_network
+
+  frontend:
+    build: ./Frontend
+    container_name: rideshare_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - rideshare_network
+
+volumes:
+  postgres_data:
+
+networks:
+  rideshare_network:
+    driver: bridge
