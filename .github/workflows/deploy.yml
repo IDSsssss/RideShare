@@ -103,12 +103,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
+      - name: Download and Install Railway CLI
         run: |
-          # Явно используем bash для выполнения скрипта установки
-          bash -c "curl -fsSL https://railway.app/install.sh | sh"
-          # Добавляем бинарник Railway в PATH для текущего шага
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+          # Скачиваем последнюю версию Railway CLI для Linux
+          curl -L https://github.com/railwayapp/cli/releases/download/v3.19.0/railway-v3.19.0-x86_64-unknown-linux-musl.tar.gz -o railway.tar.gz
+          tar -xzf railway.tar.gz
+          # Перемещаем бинарный файл в директорию, доступную по PATH
+          sudo mv railway /usr/local/bin/
+          # Удаляем архив
+          rm railway.tar.gz
 
       - name: Deploy to Railway
         run: railway up --detach
@@ -116,7 +119,7 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Wait for deployment
-        run: sleep 10
+        run: sleep 15
 
       - name: Healthcheck Backend
         run: |
@@ -142,4 +145,4 @@ jobs:
             sleep 10
           done
           echo "Frontend healthcheck failed"
-          exit 1}}
+          exit 1
