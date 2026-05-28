@@ -94,57 +94,37 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/frontend:latest
             ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/frontend:${{ github.sha }}
 
-  deploy:
+  healthcheck:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: |
-          curl -L https://github.com/railwayapp/cli/releases/download/v3.19.0/railway-v3.19.0-x86_64-unknown-linux-musl.tar.gz -o railway.tar.gz
-          tar -xzf railway.tar.gz
-          sudo mv railway /usr/local/bin/
-          rm railway.tar.gz
-
-      - name: Link Railway Project
-        run: railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy to Railway
-        run: railway up --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Wait for deployment
-        run: sleep 15
+      - name: Wait for Railway deployment
+        run: sleep 30
 
       - name: Healthcheck Backend
         run: |
           for i in {1..12}; do
             if curl -f https://rideshare-production-7f46.up.railway.app/swagger-ui.html; then
-              echo "Backend healthcheck passed!"
+              echo "✅ Backend healthcheck passed!"
               exit 0
             fi
-            echo "Waiting for backend... (attempt $i/12)"
+            echo "⏳ Waiting for backend... (attempt $i/12)"
             sleep 10
           done
-          echo "Backend healthcheck failed"
+          echo "❌ Backend healthcheck failed"
           exit 1
 
       - name: Healthcheck Frontend
         run: |
           for i in {1..12}; do
             if curl -f https://ridesharefrontend-production.up.railway.app/health; then
-              echo "Frontend healthcheck passed!"
+              echo "✅ Frontend healthcheck passed!"
               exit 0
             fi
-            echo "Waiting for frontend... (attempt $i/12)"
+            echo "⏳ Waiting for frontend... (attempt $i/12)"
             sleep 10
           done
-          echo "Frontend healthcheck failed"
+          echo "❌ Frontend healthcheck failed"
           exit 1
