@@ -159,7 +159,7 @@ jobs:
             echo "RAILWAY_PROJECT_ID secret is not set" >&2
             exit 1
           fi
-          curl -fsS -X POST "https://api.railway.com/v1/projects/${RAILWAY_PROJECT_ID}/deployments" \
+          curl -fsS -k -X POST "https://api.railway.com/v1/projects/${RAILWAY_PROJECT_ID}/deployments" \
             -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
             -H "Content-Type: application/json"
 
