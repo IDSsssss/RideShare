@@ -142,29 +142,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: docker-build
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
+      - name: Trigger Railway Deploy
         run: |
-          curl -L https://github.com/railwayapp/cli/releases/download/v3.19.0/railway-v3.19.0-x86_64-unknown-linux-musl.tar.gz -o railway.tar.gz
-          tar -xzf railway.tar.gz
-          sudo mv railway /usr/local/bin/
-          rm railway.tar.gz
-
-      - name: Link Railway project
-        run: railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Deploy to Railway
-        run: railway up --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query": "mutation { deploymentCreate(projectId: \"${{ secrets.RAILWAY_PROJECT_ID }}\") { id status } }"}' \
+            https://api.railway.com/graphql
 
   healthcheck:
     name: Healthcheck
