@@ -151,57 +151,15 @@ jobs:
             https://api.railway.app/v2/projects/${{ secrets.RAILWAY_PROJECT_ID }}/deploy
 
   healthcheck:
-    name: Healthcheck
     runs-on: ubuntu-latest
     needs: deploy
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    permissions:
-      contents: read
-
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Wait for startup
-        run: sleep 60
-
-      - name: Check backend health with retries
-        env:
-          BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
+      - name: Wait for deploy
+        run: sleep 90
+      - name: Healthcheck backend
         run: |
-          if [ -z "$BACKEND_URL" ]; then
-            echo "RAILWAY_BACKEND_URL secret is not set" >&2
-            exit 1
-          fi
-
-          BASE="${BACKEND_URL%/}"
-          for i in {1..45}; do
-            RESPONSE=$(curl -fsS "${BASE}/swagger-ui.html" || true)
-            if echo "$RESPONSE" | grep -q "Swagger UI"; then
-              echo "✅ Backend healthcheck passed"
-              exit 0
-            fi
-            echo "⏳ Backend healthcheck attempt $i failed, retrying in 20s..."
-            sleep 20
-          done
-          echo "❌ Backend service is not healthy after retries" >&2
-          exit 1
-
-      - name: Check frontend health with retries
-        env:
-          FRONTEND_URL: ${{ secrets.RAILWAY_FRONTEND_URL }}
+          curl -f https://rideshare-production-7f46.up.railway.app/swagger-ui.html || exit 1
+      - name: Healthcheck frontend
         run: |
-          if [ -z "$FRONTEND_URL" ]; then
-            echo "RAILWAY_FRONTEND_URL secret is not set" >&2
-            exit 1
-          fi
-
-          BASE="${FRONTEND_URL%/}"
-          for i in {1..45}; do
-            RESPONSE=$(curl -fsS "${BASE}/health" || true)
-            if echo "$RESPONSE" | grep -q "healthy"; then
-              echo "✅ Frontend healthcheck passed"
-              exit 0
-            fi
-            echo "⏳ Frontend healthcheck attempt $i failed, retrying in 20s..."
-            sleep 20
-          done
-          echo "❌ Frontend service is not healthy after retries" >&2
-          exit 1
+          curl -f https://ridesharefrontend-production.up.railway.app/health || exit 1
