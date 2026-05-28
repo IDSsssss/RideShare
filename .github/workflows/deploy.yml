@@ -115,14 +115,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Convert to lowercase
+        run: |
+          echo "LOWER_REPO=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Build and push backend
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}-backend:latest
-            ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
+            ghcr.io/${{ env.LOWER_REPO }}-backend:latest
+            ghcr.io/${{ env.LOWER_REPO }}-backend:${{ github.sha }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
@@ -130,8 +134,8 @@ jobs:
           context: ./Frontend
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}-frontend:latest
-            ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
+            ghcr.io/${{ env.LOWER_REPO }}-frontend:latest
+            ghcr.io/${{ env.LOWER_REPO }}-frontend:${{ github.sha }}
 
   deploy:
     name: Deploy to Railway
