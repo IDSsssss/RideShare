@@ -138,18 +138,17 @@ jobs:
             ghcr.io/${{ env.LOWER_REPO }}-frontend:${{ github.sha }}
 
   deploy:
-    name: Deploy to Railway
     runs-on: ubuntu-latest
-    needs: docker-build
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: [ docker-build ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Trigger Railway Deploy
+      - name: Deploy to Railway
         run: |
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"query": "mutation { deploymentCreate(projectId: \"${{ secrets.RAILWAY_PROJECT_ID }}\") { id status } }"}' \
-            https://api.railway.com/graphql
+            -d '{"projectId": "${{ secrets.RAILWAY_PROJECT_ID }}"}' \
+            https://api.railway.app/v2/projects/${{ secrets.RAILWAY_PROJECT_ID }}/deploy
 
   healthcheck:
     name: Healthcheck
