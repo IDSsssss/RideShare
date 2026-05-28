@@ -144,7 +144,7 @@ jobs:
     steps:
       - name: Deploy to Railway
         run: |
-          sleep(90)
+          sleep 90
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
