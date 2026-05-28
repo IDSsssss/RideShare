@@ -155,8 +155,6 @@ jobs:
     needs: deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Wait for deploy
-        run: sleep 90
       - name: Healthcheck backend
         run: |
           curl -f https://rideshare-production-7f46.up.railway.app/swagger-ui.html || exit 1
