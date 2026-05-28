@@ -6,11 +6,6 @@ on:
   pull_request:
     branches: [ main, master ]
 
-env:
-  REGISTRY: ghcr.io
-  BACKEND_IMAGE: ${{ github.repository_owner }}_backend
-  FRONTEND_IMAGE: ${{ github.repository_owner }}_frontend
-
 jobs:
   test-backend:
     runs-on: ubuntu-latest
@@ -62,17 +57,17 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Convert repository owner to lowercase
-        run: |
-          echo "LOWER_OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -82,8 +77,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/backend:latest
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/backend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}-backend:latest
+            ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
@@ -91,16 +86,22 @@ jobs:
           context: ./Frontend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/frontend:latest
-            ${{ env.REGISTRY }}/${{ env.LOWER_OWNER }}/frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}-frontend:latest
+            ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
 
-  healthcheck:
+  deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
-      - name: Wait for Railway deployment
+      - name: Trigger Railway Deploy
+        run: |
+          curl -X POST "https://api.railway.com/v1/projects/${{ secrets.RAILWAY_PROJECT_ID }}/deployments" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json"
+
+      - name: Wait for deployment
         run: sleep 30
 
       - name: Healthcheck Backend
