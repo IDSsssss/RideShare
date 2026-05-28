@@ -21,7 +21,6 @@ EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=prod \
     JAVA_OPTS="-Xmx512m -Xms256m"
 
-# Railway сам подставит DATABASE_URL
 ENV SPRING_DATASOURCE_URL=${DATABASE_URL}
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
